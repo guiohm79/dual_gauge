@@ -1,0 +1,62 @@
+# Exemple de configuration pour dual-gauge-card
+# Deux cercles concentriques partageant le même centre
+
+type: custom:dual-gauge-card
+name: "Climat Bureau"
+gauge_size: 220
+inner_gauge_size: 140  # Optionnel, par défaut 65% du gauge_size
+
+gauges:
+  # Gauge intérieure (cercle du centre)
+  - entity: sensor.temperature_bureau
+    name: "Température"
+    unit: "°C"
+    min: 0
+    max: 40
+    decimals: 1
+    leds_count: 80
+    led_size: 6
+    smooth_transitions: true
+    animation_duration: 800
+    severity:
+      - color: "#0288d1"  # Bleu froid
+        value: 0
+      - color: "#4caf50"  # Vert confortable
+        value: 18
+      - color: "#ff9800"  # Orange chaud
+        value: 25
+      - color: "#f44336"  # Rouge très chaud
+        value: 30
+    theme: default
+    hide_inactive_leds: false
+
+  # Gauge extérieure (cercle externe)
+  - entity: sensor.humidity_bureau
+    name: "Humidité"
+    unit: "%"
+    min: 0
+    max: 100
+    decimals: 0
+    leds_count: 100
+    led_size: 8
+    smooth_transitions: true
+    animation_duration: 800
+    severity:
+      - color: "#f44336"  # Rouge - trop sec
+        value: 0
+      - color: "#ff9800"  # Orange - sec
+        value: 30
+      - color: "#4caf50"  # Vert - idéal
+        value: 40
+      - color: "#ff9800"  # Orange - humide
+        value: 60
+      - color: "#f44336"  # Rouge - trop humide
+        value: 80
+    theme: default
+    hide_inactive_leds: false
+
+# Options globales
+power_save_mode: false
+debounce_updates: false
+update_interval: 1000
+hide_shadows: false
