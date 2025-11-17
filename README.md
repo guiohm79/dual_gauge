@@ -11,11 +11,12 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 
 ## Screenshots
 
-![Exemple 5](https://raw.githubusercontent.com/guiohm79/dual-gauge-card/main/captures/Exemple5.jpeg)
-![Example 1](https://raw.githubusercontent.com/guiohm79/dual-gauge-card/main/captures/Exemple1.png)
-![Example 2](https://raw.githubusercontent.com/guiohm79/dual-gauge-card/main/captures/Exemple2.png)
-![Example 3](https://raw.githubusercontent.com/guiohm79/dual-gauge-card/main/captures/Exemple3.png)
-![Exemple 4](https://raw.githubusercontent.com/guiohm79/dual-gauge-card/main/captures/Exemple4.png)
+![Example 1](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple4.png)
+![Example 2](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple2.png)
+![Example 3](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple3.png)
+![Exemple 4](https://raw.githubusercontent.com/guiohm79/dual_gauge/blob/captures/Exemple4.png)
+
+![Exemple 5](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple1.png)
 
 ## Features
 
