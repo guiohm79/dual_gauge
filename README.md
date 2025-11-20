@@ -27,7 +27,7 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 
 <p align="center">
   <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple1.png" width="350" alt="Exemple 5">
-  <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple6.png" width="350" alt="Exemple 6">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/0d5210e32166785ad6fbccaa8a29810b425673d1/captures/Exemple6.png" width="350" alt="Exemple 6">
 </p>
 
 
