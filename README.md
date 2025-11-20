@@ -1,8 +1,8 @@
 # Dual Gauge Card
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
-[![GitHub Release](https://img.shields.io/github/release/guiohm79/dual-gauge-card.svg)](https://github.com/guiohm79/dual-gauge-card/releases)
-[![License](https://img.shields.io/github/license/guiohm79/dual-gauge-card.svg)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/release/guiohm79/dual_gauge.svg)](https://github.com/guiohm79/dual_gauge/releases)
+[![License](https://img.shields.io/github/license/guiohm79/dual_gauge.svg)](LICENSE)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=flat-square&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/guiohm79)
 
 A custom card for Home Assistant that displays two concentric circular LED gauges, allowing you to visualize two measurements simultaneously.
