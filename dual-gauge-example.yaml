@@ -60,3 +60,92 @@ power_save_mode: false
 debounce_updates: false
 update_interval: 1000
 hide_shadows: false
+
+---
+# EXEMPLE AVEC MODE BIDIRECTIONNEL
+# Parfait pour les flux d'énergie (import/export)
+
+type: custom:dual-gauge-card
+name: "Flux Énergie"
+gauge_size: 220
+inner_gauge_size: 140
+primary_gauge: outer  # La puissance externe en grand
+
+gauges:
+  # Gauge intérieure : Batterie
+  - entity: sensor.battery_power
+    unit: "W"
+    min: -3000    # Décharge
+    max: 3000     # Charge
+    decimals: 0
+    bidirectional: true  # Active le mode bidirectionnel
+    leds_count: 80
+    led_size: 6
+    smooth_transitions: true
+    severity:
+      - color: "#4caf50"  # Vert - décharge complète
+        value: -3000
+      - color: "#8bc34a"  # Vert clair - petite décharge
+        value: -1000
+      - color: "#ffeb3b"  # Jaune - neutre
+        value: 0
+      - color: "#ff9800"  # Orange - petite charge
+        value: 1000
+      - color: "#f44336"  # Rouge - charge complète
+        value: 3000
+    markers:
+      - value: -2000
+        color: "#4caf50"
+        label: "-2kW"
+      - value: 0
+        color: "#ffeb3b"
+        label: "0"
+      - value: 2000
+        color: "#f44336"
+        label: "+2kW"
+    center_shadow: true
+    center_shadow_blur: 30
+    center_shadow_spread: 15
+
+  # Gauge extérieure : Réseau (import/export)
+  - entity: sensor.grid_power
+    unit: "W"
+    min: -5000    # Export vers le réseau
+    max: 5000     # Import du réseau
+    decimals: 0
+    bidirectional: true  # Active le mode bidirectionnel
+    leds_count: 100
+    led_size: 8
+    smooth_transitions: true
+    severity:
+      - color: "#4caf50"  # Vert - export max
+        value: -5000
+      - color: "#8bc34a"  # Vert clair
+        value: -2500
+      - color: "#cddc39"  # Jaune-vert
+        value: -500
+      - color: "#ffeb3b"  # Jaune - équilibre
+        value: 0
+      - color: "#ff9800"  # Orange
+        value: 2500
+      - color: "#f44336"  # Rouge - import max
+        value: 5000
+    zones:
+      - from: -5000
+        to: 0
+        color: "#4caf50"
+        opacity: 0.3  # Zone verte pour l'export
+      - from: 0
+        to: 5000
+        color: "#f44336"
+        opacity: 0.3  # Zone rouge pour l'import
+    markers:
+      - value: 0
+        color: "#ffffff"
+        label: "Équilibre"
+    outer_shadow: true
+    outer_shadow_blur: 30
+    outer_shadow_spread: 15
+
+hide_shadows: false
+title_position: top

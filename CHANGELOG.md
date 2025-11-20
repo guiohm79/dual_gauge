@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- ⚡ **Bidirectional mode for negative values**
+  - New `bidirectional` option for each gauge configuration
+  - Visual clarity for negative/positive values: positive displays clockwise, negative counter-clockwise
+  - Adaptive zero point: automatically uses zero as reference if range crosses zero, otherwise uses midpoint
+  - Proportional LED allocation for asymmetric ranges (e.g., -1000 to 5000)
+  - Perfect for power flow (import/export), battery charge/discharge, temperature differences
+  - Support in markers and zones rendering for bidirectional mode
+  - New utility functions: `calculateBidirectionalLeds()` and `valueToAngle()`
+  - Fully backward compatible (default: `false`)
+
 ## [1.1.0] - 2024-11-16
 
 ### Added

@@ -109,6 +109,114 @@ function optimizeLEDs(configuredCount) {
   return configuredCount || 100;
 }
 
+/**
+ * Calculate bidirectional LED activation
+ * @param {number} value - Current value
+ * @param {number} min - Minimum value
+ * @param {number} max - Maximum value
+ * @param {number} ledsCount - Total number of LEDs
+ * @param {boolean} bidirectional - Enable bidirectional mode
+ * @returns {Object} Object with activeLeds count and direction ('positive', 'negative', or 'unidirectional')
+ */
+function calculateBidirectionalLeds(value, min, max, ledsCount, bidirectional) {
+  // Calculate full-range normalized value for severity colors (always needed)
+  const fullRangeNormalized = ((value - min) / (max - min)) * 100;
+
+  if (!bidirectional) {
+    // Standard unidirectional behavior
+    const activeLeds = Math.round((fullRangeNormalized / 100) * ledsCount);
+    return {
+      activeLeds,
+      direction: 'unidirectional',
+      normalizedValue: fullRangeNormalized
+    };
+  }
+
+  // Bidirectional mode: reference point is at the top (LED index 0)
+  // Values above reference go clockwise (to the right)
+  // Values below reference go counter-clockwise (to the left)
+
+  // Determine reference point (adaptive zero)
+  const referencePoint = (min <= 0 && max >= 0) ? 0 : (min + max) / 2;
+
+  // Calculate range sizes on each side of reference
+  const totalRange = max - min;
+  const lowerRange = referencePoint - min;  // Size from min to reference
+  const upperRange = max - referencePoint;  // Size from reference to max
+
+  // Calculate proportional LED allocation
+  const lowerProportion = lowerRange / totalRange;
+  const upperProportion = upperRange / totalRange;
+
+  if (value >= referencePoint) {
+    // Upper values: calculate percentage from reference to max
+    const percentage = upperRange > 0 ? ((value - referencePoint) / upperRange) * 100 : 0;
+    // Allocate LEDs proportionally based on upper range's share of total
+    const maxUpperLeds = ledsCount * upperProportion;
+    const activeLeds = Math.round((percentage / 100) * maxUpperLeds);
+
+    return {
+      activeLeds,
+      direction: 'positive',
+      normalizedValue: fullRangeNormalized  // Use full-range for severity colors
+    };
+  } else {
+    // Lower values: calculate percentage from reference to min
+    const percentage = lowerRange > 0 ? ((referencePoint - value) / lowerRange) * 100 : 0;
+    // Allocate LEDs proportionally based on lower range's share of total
+    const maxLowerLeds = ledsCount * lowerProportion;
+    const activeLeds = Math.round((percentage / 100) * maxLowerLeds);
+
+    return {
+      activeLeds,
+      direction: 'negative',
+      normalizedValue: fullRangeNormalized  // Use full-range for severity colors
+    };
+  }
+}
+
+/**
+ * Convert value to angle based on bidirectional or unidirectional mode
+ * @param {number} value - The value to convert
+ * @param {number} min - Minimum range value
+ * @param {number} max - Maximum range value
+ * @param {boolean} bidirectional - Whether bidirectional mode is enabled
+ * @returns {number} Angle in degrees (0-360)
+ */
+function valueToAngle(value, min, max, bidirectional) {
+  if (!bidirectional) {
+    // Unidirectional mode: simple linear mapping
+    const percentage = ((value - min) / (max - min)) * 100;
+    return (percentage / 100) * 360;
+  }
+
+  // Bidirectional mode: proportional allocation with adaptive reference point
+
+  // Determine reference point (adaptive zero)
+  const referencePoint = (min <= 0 && max >= 0) ? 0 : (min + max) / 2;
+
+  // Calculate range sizes on each side of reference
+  const totalRange = max - min;
+  const lowerRange = referencePoint - min;  // Size from min to reference
+  const upperRange = max - referencePoint;  // Size from reference to max
+
+  // Calculate proportional angle allocation (total 360°)
+  const lowerProportion = lowerRange / totalRange;
+  const upperProportion = upperRange / totalRange;
+  const maxLowerAngle = lowerProportion * 360;  // Degrees allocated to lower side
+  const maxUpperAngle = upperProportion * 360;  // Degrees allocated to upper side
+
+  if (value >= referencePoint) {
+    // Upper values: go clockwise from top (0° to maxUpperAngle)
+    const percentage = upperRange > 0 ? ((value - referencePoint) / upperRange) * 100 : 0;
+    return (percentage / 100) * maxUpperAngle;
+  } else {
+    // Lower values: go counter-clockwise from top (360° to 360° - maxLowerAngle)
+    const percentage = lowerRange > 0 ? ((referencePoint - value) / lowerRange) * 100 : 0;
+    return 360 - ((percentage / 100) * maxLowerAngle);
+  }
+}
+
 // ============================================================================
 // STYLES
 // ============================================================================
@@ -470,14 +578,12 @@ function addMarkersAndZones(context) {
   if (config1.markers) {
     const min1 = config1.min || 0;
     const max1 = config1.max || 100;
-    const range1 = max1 - min1;
     const markersRadius1 = config1.markers_radius !== undefined
       ? config1.markers_radius
       : innerGaugeRadius;
 
     config1.markers.forEach(marker => {
-      const percentage = ((marker.value - min1) / range1) * 100;
-      const angle = (percentage / 100) * 360;
+      const angle = valueToAngle(marker.value, min1, max1, config1.bidirectional || false);
 
       // Calcul cartésien pour positionnement précis
       const angleRad = (angle - 90) * Math.PI / 180;
@@ -528,14 +634,12 @@ function addMarkersAndZones(context) {
   if (config2.markers) {
     const min2 = config2.min || 0;
     const max2 = config2.max || 100;
-    const range2 = max2 - min2;
     const markersRadius2 = config2.markers_radius !== undefined
       ? config2.markers_radius
       : (outerGaugeSize / 2);
 
     config2.markers.forEach(marker => {
-      const percentage = ((marker.value - min2) / range2) * 100;
-      const angle = (percentage / 100) * 360;
+      const angle = valueToAngle(marker.value, min2, max2, config2.bidirectional || false);
 
       // Calcul cartésien pour positionnement précis
       const angleRad = (angle - 90) * Math.PI / 180;
@@ -586,15 +690,17 @@ function addMarkersAndZones(context) {
   if (config1.zones) {
     const min1 = config1.min || 0;
     const max1 = config1.max || 100;
-    const range1 = max1 - min1;
     const svgSize = (innerGaugeRadius + 10) * 2;
 
     config1.zones.forEach(zone => {
-      const startPercentage = ((zone.from - min1) / range1) * 100;
-      const endPercentage = ((zone.to - min1) / range1) * 100;
-      const startAngle = (startPercentage / 100) * 360;
-      const endAngle = (endPercentage / 100) * 360;
-      const arcAngle = endAngle - startAngle;
+      const startAngle = valueToAngle(zone.from, min1, max1, config1.bidirectional || false);
+      const endAngle = valueToAngle(zone.to, min1, max1, config1.bidirectional || false);
+
+      // Calculate arc angle (handle wrapping around 0°/360°)
+      let arcAngle = endAngle - startAngle;
+      if (arcAngle < 0) {
+        arcAngle += 360;
+      }
 
       const svgNS = "http://www.w3.org/2000/svg";
       const svg = document.createElementNS(svgNS, "svg");
@@ -635,14 +741,16 @@ function addMarkersAndZones(context) {
   if (config2.zones) {
     const min2 = config2.min || 0;
     const max2 = config2.max || 100;
-    const range2 = max2 - min2;
 
     config2.zones.forEach(zone => {
-      const startPercentage = ((zone.from - min2) / range2) * 100;
-      const endPercentage = ((zone.to - min2) / range2) * 100;
-      const startAngle = (startPercentage / 100) * 360;
-      const endAngle = (endPercentage / 100) * 360;
-      const arcAngle = endAngle - startAngle;
+      const startAngle = valueToAngle(zone.from, min2, max2, config2.bidirectional || false);
+      const endAngle = valueToAngle(zone.to, min2, max2, config2.bidirectional || false);
+
+      // Calculate arc angle (handle wrapping around 0°/360°)
+      let arcAngle = endAngle - startAngle;
+      if (arcAngle < 0) {
+        arcAngle += 360;
+      }
 
       const svgNS = "http://www.w3.org/2000/svg";
       const svg = document.createElementNS(svgNS, "svg");
@@ -684,10 +792,15 @@ function addMarkersAndZones(context) {
 // ============================================================================
 
 function updateLedsDual(context, value, ledsCount, prefix, gaugeConfig) {
-  const activeLeds = Math.round((value / 100) * ledsCount);
   const min = gaugeConfig.min !== undefined ? gaugeConfig.min : 0;
   const max = gaugeConfig.max !== undefined ? gaugeConfig.max : 100;
-  const color = getLedColor(value, gaugeConfig.severity, min, max);
+
+  // Convert normalized value (0-100%) back to real value for bidirectional calculation
+  const realValue = min + (value / 100) * (max - min);
+  const bidirectional = gaugeConfig.bidirectional || false;
+  const ledInfo = calculateBidirectionalLeds(realValue, min, max, ledsCount, bidirectional);
+
+  const color = getLedColor(ledInfo.normalizedValue, gaugeConfig.severity, min, max);
 
   // Appliquer l'ombre externe si enable_shadow est activé
   if (gaugeConfig.enable_shadow) {
@@ -701,7 +814,21 @@ function updateLedsDual(context, value, ledsCount, prefix, gaugeConfig) {
     const led = context.shadowRoot.getElementById(`led-${prefix}-${i}`);
     if (!led) continue;
 
-    if (i < activeLeds) {
+    let isActive = false;
+
+    if (ledInfo.direction === 'unidirectional') {
+      // Standard unidirectional mode: activate from LED 0 onwards
+      isActive = i < ledInfo.activeLeds;
+    } else if (ledInfo.direction === 'positive') {
+      // Bidirectional positive: activate clockwise from LED 0
+      isActive = i < ledInfo.activeLeds;
+    } else if (ledInfo.direction === 'negative') {
+      // Bidirectional negative: activate counter-clockwise from LED 0
+      // LED 0 is the zero point (12h) and must be included, then LEDs go backwards (99, 98, 97...)
+      isActive = (i === 0) || (i > (ledsCount - ledInfo.activeLeds));
+    }
+
+    if (isActive) {
       led.style.display = "";
       led.style.background = `radial-gradient(circle, rgba(255, 255, 255, 0.8), ${color})`;
       led.style.boxShadow = `0 0 8px ${color}`;
@@ -889,7 +1016,8 @@ function parseDualConfig(config) {
         { color: '#f44336', value: 75 }
       ],
       theme: gaugeConfig.theme || 'default',
-      hide_inactive_leds: gaugeConfig.hide_inactive_leds || false
+      hide_inactive_leds: gaugeConfig.hide_inactive_leds || false,
+      bidirectional: gaugeConfig.bidirectional || false
     }))
   };
 

@@ -9,13 +9,28 @@ A custom card for Home Assistant that displays two concentric circular LED gauge
 
 Perfect for comparing indoor/outdoor temperatures, displaying temperature and humidity together, or any two related sensor values side by side.
 
+
+
 ## Screenshots
 
-![Example 1](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple4.png)
-![Example 2](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple2.png)
-![Example 3](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple3.png)
-![Exemple 4](https://github.com/guiohm79/dual_gauge/blob/8fbeb73ef1dc2ddf3e2cdd153f3e97d19f49a983/captures/Exemple4.png)
-![Exemple 5](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple1.png)
+
+
+<p align="center">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple4.png" width="350" alt="Exemple 1">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple2.png" width="350" alt="Exemple 2">
+</p>
+
+<p align="center">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple3.png" width="350" alt="Exemple 3">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/8fbeb73ef1dc2ddf3e2cdd153f3e97d19f49a983/captures/Exemple4.png" width="350" alt="Exemple 4">
+</p>
+
+<p align="center">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple1.png" width="350" alt="Exemple 5">
+    <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple6.png" width="350" alt="Exemple 6">
+</p>
+
+
 
 ## Features
 
@@ -24,6 +39,7 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 - Separate configuration for each gauge
 - Configurable primary value display (choose which value shows large)
 - Adjustable gauge spacing
+- bidirectional for negative values
 
 **Advanced Shadow System**
 - Independent shadow controls for each gauge
@@ -144,6 +160,44 @@ Each element in the `gauges` array supports these options:
 | `max` | number | 100 | Maximum value |
 | `unit` | string | - | Unit to display (e.g., '°C', '%', 'W') |
 | `decimals` | number | 1 | Number of decimal places |
+| `bidirectional` | boolean | false | Enable bidirectional mode for negative values (see below) |
+
+##### Bidirectional Mode
+
+The `bidirectional` option enables support for displaying negative values with visual clarity. When enabled:
+
+- **Positive values** display clockwise (right side) from the top (12 o'clock position)
+- **Negative values** display counter-clockwise (left side) from the top
+- **Zero point** is always at the top of the gauge
+- **LED allocation** is proportional to the range on each side of zero
+
+This is perfect for:
+- Power flow (import/export): `-5000W` to `+5000W`
+- Battery charge/discharge: `-3000W` to `+3000W`
+- Temperature differences: `-10°C` to `+10°C`
+
+**Example configuration:**
+
+```yaml
+gauges:
+  - entity: sensor.power_import_export
+    min: -5000
+    max: 5000
+    unit: 'W'
+    bidirectional: true
+    severity:
+      - color: '#4caf50'
+        value: -5000  # Full export (green)
+      - color: '#ffeb3b'
+        value: 0      # Zero (yellow)
+      - color: '#f44336'
+        value: 5000   # Full import (red)
+```
+
+**How it works:**
+- If `min` and `max` cross zero (e.g., -5000 to 5000), zero becomes the reference point
+- If they don't cross zero (e.g., 10 to 50), the midpoint (30) becomes the reference
+- LEDs are allocated proportionally: asymmetric ranges like -1000 to 5000 will use ~16.7% LEDs for negative, ~83.3% for positive
 
 #### Visual Options
 
