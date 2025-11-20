@@ -14,8 +14,7 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 ![Example 1](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple4.png)
 ![Example 2](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple2.png)
 ![Example 3](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple3.png)
-![Exemple 4](https://raw.githubusercontent.com/guiohm79/dual_gauge/blob/captures/Exemple4.png)
-
+![Exemple 4](https://github.com/guiohm79/dual_gauge/blob/8fbeb73ef1dc2ddf3e2cdd153f3e97d19f49a983/captures/Exemple4.png)
 ![Exemple 5](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple1.png)
 
 ## Features
