@@ -9,13 +9,27 @@ A custom card for Home Assistant that displays two concentric circular LED gauge
 
 Perfect for comparing indoor/outdoor temperatures, displaying temperature and humidity together, or any two related sensor values side by side.
 
+
+
 ## Screenshots
 
-![Example 1](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple4.png)
-![Example 2](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple2.png)
-![Example 3](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple3.png)
-![Exemple 4](https://github.com/guiohm79/dual_gauge/blob/8fbeb73ef1dc2ddf3e2cdd153f3e97d19f49a983/captures/Exemple4.png)
-![Exemple 5](https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple1.png)
+
+
+<p align="center">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple4.png" width="350" alt="Exemple 1">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple2.png" width="350" alt="Exemple 2">
+</p>
+
+<p align="center">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple3.png" width="350" alt="Exemple 3">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/8fbeb73ef1dc2ddf3e2cdd153f3e97d19f49a983/captures/Exemple4.png" width="350" alt="Exemple 4">
+</p>
+
+<p align="center">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple1.png" width="350" alt="Exemple 7">
+</p>
+
+
 
 ## Features
 
