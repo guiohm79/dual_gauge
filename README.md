@@ -79,6 +79,10 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 - Optimized animations
 - Smooth value transitions
 
+**Interactive Elements**
+- Click on inner value -> Opens inner entity history
+- Click on outer value -> Opens outer entity history
+
 ## Installation
 
 ### Via HACS (Recommended)
@@ -217,6 +221,12 @@ gauges:
 | `leds_count` | number | 100 | Number of LEDs on the circle |
 | `led_size` | number | 8 (outer) / 6 (inner) | LED size in pixels |
 | `hide_inactive_leds` | boolean | false | Hide inactive LEDs |
+| `value_font_size` | string | '24px' | Font size for value (e.g. '30px') |
+| `value_font_weight` | string | 'bold' | Font weight for value |
+| `value_font_color` | string | - | Font color for value |
+| `unit_font_size` | string | '14px' | Font size for unit (e.g. '14px') |
+| `unit_font_weight` | string | 'normal' | Font weight for unit |
+| `unit_font_color` | string | - | Font color for unit |
 
 #### Individual Themes
 
