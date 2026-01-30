@@ -1,9 +1,17 @@
 # Dual Gauge Card
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
-[![GitHub Release](https://img.shields.io/github/release/guiohm79/dual-gauge-card.svg)](https://github.com/guiohm79/dual-gauge-card/releases)
-[![License](https://img.shields.io/github/license/guiohm79/dual-gauge-card.svg)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/release/guiohm79/dual_gauge.svg)](https://github.com/guiohm79/dual_gauge/releases)
+[![License](https://img.shields.io/github/license/guiohm79/dual_gauge.svg)](LICENSE)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=flat-square&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/guiohm79)
+![downloads-total][github-downloads]
+![downloads-latest][github-latest-downloads]
+![stars][github-stars]
+
+[github-downloads]: https://img.shields.io/github/downloads/guiohm79/dual_gauge/total?style=flat
+[github-latest-downloads]: https://img.shields.io/github/downloads/guiohm79/dual_gauge/latest/total?style=flat
+[github-stars]: https://img.shields.io/github/stars/guiohm79/dual_gauge?style=flat
+
 
 A custom card for Home Assistant that displays two concentric circular LED gauges, allowing you to visualize two measurements simultaneously.
 
@@ -74,6 +82,9 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 ## Installation
 
 ### Via HACS (Recommended)
+
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=guiohm79&repository=dual_gauge&category=plugin)
 
 1. Open HACS in Home Assistant
 2. Go to "Frontend"
