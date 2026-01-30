@@ -301,17 +301,36 @@ const stylesCSS = `
 }
 
 .value {
-  font-size: var(--value-font-size);
   font-family: var(--value-font-family);
-  font-weight: var(--value-font-weight);
-  color: var(--value-font-color);
   transition: all 0.3s ease;
 }
 
+#value-inner {
+  font-size: var(--value-font-size-inner);
+  font-weight: var(--value-font-weight-inner);
+  color: var(--value-font-color-inner);
+}
+
+#value-outer {
+  font-size: var(--value-font-size-outer);
+  font-weight: var(--value-font-weight-outer);
+  color: var(--value-font-color-outer);
+}
+
 .unit {
-  font-size: var(--unit-font-size);
-  font-weight: var(--unit-font-weight);
-  color: var(--unit-font-color);
+  /* Common styles if needed */
+}
+
+#unit-inner {
+  font-size: var(--unit-font-size-inner);
+  font-weight: var(--unit-font-weight-inner);
+  color: var(--unit-font-color-inner);
+}
+
+#unit-outer {
+  font-size: var(--unit-font-size-outer);
+  font-weight: var(--unit-font-weight-outer);
+  color: var(--unit-font-color-outer);
 }
 
 .title {
@@ -391,13 +410,10 @@ const stylesCSS = `
   opacity: 0.8;
 }
 
-.value-group.secondary .value {
-  font-size: calc(var(--value-font-size) * 0.7);
-}
-
-.value-group.secondary .unit {
-  font-size: calc(var(--unit-font-size) * 0.85);
-}
+/* 
+   Legacy scaling for secondary items is now handled via CSS variables 
+   generated in Javascript to allow overrides 
+*/
 
 .marker {
   position: absolute;
@@ -468,6 +484,73 @@ function renderDual(context) {
   // Déterminer le thème global de la carte (utilise le thème de la première gauge par défaut)
   const globalTheme = context.config.card_theme ? getTheme(context.config.card_theme, context.config) : theme1;
 
+  // Déterminer quelle gauge est principale (par défaut: inner = gauge 0)
+  const primaryGauge = context.config.primary_gauge || 'inner'; // 'inner' ou 'outer'
+  const isPrimaryInner = primaryGauge === 'inner';
+
+  // Base defaults from config1 (usually primary, or at least the reference in old code)
+  const valSize1 = config1.value_font_size || '24px';
+  const valWeight1 = config1.value_font_weight || 'bold';
+  const valColor1 = config1.value_font_color || theme1.textColor;
+  const unitSize1 = config1.unit_font_size || '14px';
+  const unitWeight1 = config1.unit_font_weight || 'normal';
+  const unitColor1 = config1.unit_font_color || theme1.secondaryTextColor;
+
+  // Helper to parse pixel value for scaling
+  const parsePx = (val) => parseFloat(val) || 0;
+
+  // Calculate defaults for scaling if needed
+  const valSizeScaled = `${parsePx(valSize1) * 0.7}px`;
+  const unitSizeScaled = `${parsePx(unitSize1) * 0.85}px`;
+
+  // Determine actual values for Inner
+  // If inner is secondary and no config, use scaled. Otherwise use config or config1 base.
+  let vSizeInner, vWeightInner, vColorInner, uSizeInner, uWeightInner, uColorInner;
+
+  if (!isPrimaryInner && !config1.value_font_size) {
+    // Inner is secondary and has no specific config -> scale it relative to Outer? 
+    // Actually the old code always used config1 as reference. 
+    // Let's stick to the behavior: config1 is explicit, config2 is scaled if not explicit.
+    // But wait, if primary_gauge is 'outer', then 'inner' becomes secondary.
+    // The CSS logic was: .secondary gets scaled.
+    vSizeInner = valSizeScaled;
+    uSizeInner = unitSizeScaled;
+  } else {
+    vSizeInner = valSize1;
+    uSizeInner = unitSize1;
+  }
+  vWeightInner = valWeight1;
+  vColorInner = valColor1;
+  uWeightInner = unitWeight1;
+  uColorInner = unitColor1;
+
+  // Determine actual values for Outer (config2)
+  let vSizeOuter, vWeightOuter, vColorOuter, uSizeOuter, uWeightOuter, uColorOuter;
+
+  // Defaults for outer if not specified
+  const valSize2Def = isPrimaryInner ? valSizeScaled : valSize1; // If outer is secondary, scale it. Use config1 base as ref? 
+  // Actually, standard behavior was: vars set from config1. .secondary class applied scaling calc() on those vars.
+  // So if Outer is secondary, it should default to scaled version of Config1.
+
+  if (config2.value_font_size) {
+    vSizeOuter = config2.value_font_size;
+  } else {
+    vSizeOuter = isPrimaryInner ? valSizeScaled : valSize1; // simplified assumption
+  }
+
+  vWeightOuter = config2.value_font_weight || (isPrimaryInner ? valWeight1 : 'bold');
+  vColorOuter = config2.value_font_color || (isPrimaryInner ? valColor1 : theme2.textColor);
+
+  if (config2.unit_font_size) {
+    uSizeOuter = config2.unit_font_size;
+  } else {
+    uSizeOuter = isPrimaryInner ? unitSizeScaled : unitSize1;
+  }
+
+  uWeightOuter = config2.unit_font_weight || (isPrimaryInner ? unitWeight1 : 'normal');
+  uColorOuter = config2.unit_font_color || (isPrimaryInner ? unitColor1 : theme2.secondaryTextColor);
+
+
   const cssVariables = `
     --card-background: ${context.config.card_background || globalTheme.background};
     --gauge-background: ${globalTheme.gaugeBackground};
@@ -483,22 +566,32 @@ function renderDual(context) {
     --center-size: ${innerGaugeSize * 0.6}px;
     --card-shadow: ${context.config.hide_shadows ? 'none' : '0 0 15px rgba(0, 0, 0, 0.5)'};
     --led-shadow: ${context.config.hide_shadows ? 'none' : '0 0 4px rgba(0, 0, 0, 0.8)'};
-    --value-font-size: ${config1.value_font_size || '24px'};
+    
     --value-font-family: ${config1.value_font_family || 'inherit'};
-    --value-font-weight: ${config1.value_font_weight || 'bold'};
-    --value-font-color: ${config1.value_font_color || theme1.textColor};
-    --unit-font-size: ${config1.unit_font_size || '14px'};
-    --unit-font-weight: ${config1.unit_font_weight || 'normal'};
-    --unit-font-color: ${config1.unit_font_color || theme1.secondaryTextColor};
+    
+    --value-font-size-inner: ${vSizeInner};
+    --value-font-weight-inner: ${vWeightInner};
+    --value-font-color-inner: ${vColorInner};
+    
+    --value-font-size-outer: ${vSizeOuter};
+    --value-font-weight-outer: ${vWeightOuter};
+    --value-font-color-outer: ${vColorOuter};
+    
+    --unit-font-size-inner: ${uSizeInner};
+    --unit-font-weight-inner: ${uWeightInner};
+    --unit-font-color-inner: ${uColorInner};
+    
+    --unit-font-size-outer: ${uSizeOuter};
+    --unit-font-weight-outer: ${uWeightOuter};
+    --unit-font-color-outer: ${uColorOuter};
+
     --title-font-size: ${context.config.title_font_size || '16px'};
     --title-font-family: ${context.config.title_font_family || 'inherit'};
     --title-font-weight: ${context.config.title_font_weight || 'normal'};
     --title-font-color: ${context.config.title_font_color || globalTheme.textColor};
   `;
 
-  // Déterminer quelle gauge est principale (par défaut: inner = gauge 0)
-  const primaryGauge = context.config.primary_gauge || 'inner'; // 'inner' ou 'outer'
-  const isPrimaryInner = primaryGauge === 'inner';
+
 
   // Déterminer la position du titre
   const titlePosition = context.config.title_position || 'bottom';
