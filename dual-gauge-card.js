@@ -233,7 +233,7 @@ const stylesCSS = `
   border-radius: 15px;
   padding: 16px;
   box-shadow: var(--card-shadow);
-  cursor: pointer;
+  box-shadow: var(--card-shadow);
   transition: box-shadow 0.3s ease-in-out;
 }
 
@@ -404,6 +404,7 @@ const stylesCSS = `
   align-items: baseline;
   justify-content: center;
   gap: 4px;
+  cursor: pointer;
 }
 
 .value-group.secondary {
@@ -629,11 +630,11 @@ function renderDual(context) {
         ${generateLedsHTML(ledsCount2, outerGaugeSize / 2, ledSize2, 'outer')}
         ${generateLedsHTML(ledsCount1, innerGaugeRadius, ledSize1, 'inner')}
         <div class="center dual-center" style="background: ${globalTheme.centerBackground}">
-          <div class="value-group ${isPrimaryInner ? '' : 'secondary'}">
+          <div class="value-group ${isPrimaryInner ? '' : 'secondary'}" id="group-inner">
             <div class="value" id="value-inner">0</div>
             <div class="unit" id="unit-inner"></div>
           </div>
-          <div class="value-group ${isPrimaryInner ? 'secondary' : ''}">
+          <div class="value-group ${isPrimaryInner ? 'secondary' : ''}" id="group-outer">
             <div class="value" id="value-outer">0</div>
             <div class="unit" id="unit-outer"></div>
           </div>
@@ -1137,11 +1138,23 @@ class DualGaugeCard extends HTMLElement {
 
     this._updateDualGauge = () => updateDualGauge(this);
 
-    this.shadowRoot
-      .getElementById("gauge-container")
-      .addEventListener("click", (e) => {
+    this._updateDualGauge = () => updateDualGauge(this);
+
+    const groupInner = this.shadowRoot.getElementById("group-inner");
+    if (groupInner) {
+      groupInner.addEventListener("click", (e) => {
+        e.stopPropagation();
         this._showEntityHistory(this.config.gauges[0].entity);
       });
+    }
+
+    const groupOuter = this.shadowRoot.getElementById("group-outer");
+    if (groupOuter) {
+      groupOuter.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._showEntityHistory(this.config.gauges[1].entity);
+      });
+    }
 
     if (this.config.power_save_mode) {
       this._setupVisibilityObserver();
