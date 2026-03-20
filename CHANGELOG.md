@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-03-20
+
+### Major Changes
+- 🔀 **Split Architecture**: Card and editor are now separate files
+  - `dual-gauge-card.js` (~46KB) - Core card functionality with dynamic editor loading
+  - `dual-gauge-card-editor.js` (~59KB) - Visual configuration editor loaded on demand
+  - Faster initial load - editor only loads when user clicks "Edit"
+  - Better caching and maintainability
+
 ### Added
+- 🌐 **Editor fully translated to English**
 - 🎨 **Visual Configuration Editor**
   - Complete visual editor for all card configuration options
   - `ha-entity-picker` integration for easy entity selection from Home Assistant
@@ -181,6 +191,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Example configuration in card.yaml
 - Screenshot (Capture1.png)
 
+[1.3.0]: https://github.com/guiohm79/custom-gauge-card/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/guiohm79/custom-gauge-card/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/guiohm79/custom-gauge-card/compare/v1.0.4...v1.1.0
 [1.0.4]: https://github.com/guiohm79/custom-gauge-card/compare/v1.0.3.1...v1.0.4
