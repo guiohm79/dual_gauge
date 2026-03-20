@@ -8,6 +8,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- 🎨 **Visual Configuration Editor**
+  - Complete visual editor for all card configuration options
+  - `ha-entity-picker` integration for easy entity selection from Home Assistant
+  - Two dedicated sections for inner and outer gauge configuration
+  - Support for all gauge options: entity, min/max, units, decimals, LEDs count/size
+  - Theme selection (default, light, dark, custom) per gauge and globally
+  - Interactive severity thresholds editor with color picker
+  - Markers and zones configuration with visual management
+  - Shadow effects configuration (center and outer shadows)
+  - Animation settings (duration, smooth transitions)
+  - Performance options (power save, debounce updates)
+  - Real-time configuration updates with `config-changed` events
+  - Clean, responsive UI with dark theme support for Home Assistant
+
+### Fixed
+- 🐛 **Visual Editor bug fixes**
+  - Fixed "Cannot add property gauges, object is not extensible" error - config is now cloned before modification
+  - Fixed "No type provided" error by adding `type: 'custom:dual-gauge-card'` to all config outputs
+  - Fixed entity picker value retrieval for `ha-entity-picker` component
+  - Fixed entity disappearing after selection - picker now correctly preserves selected entity
+  - Implemented smart re-render logic to avoid destroying pickers on simple value changes
+  - Added `_shouldReRender()` method to detect structural changes vs value changes
+  - Added `_updatePickerValues()` method to update picker values without full re-render
+  - Fixed state loss when adding/removing severity thresholds, markers, or zones
+  - Improved CSS styling for dark theme compatibility
+  - Added `_saveCurrentState()` method to preserve input values during list modifications
+
+### Added
+- 🎨 **Complete Visual Editor with all parameters**
+  - Added **Custom Theme** section with color pickers for:
+    - `custom_background` - Card background color
+    - `custom_gauge_background` - Gauge background color  
+    - `custom_center_background` - Center background color
+    - `custom_text_color` - Primary text color
+    - `custom_secondary_text_color` - Secondary text color
+  - Added **Title Typography** section:
+    - `title_font_size` - Title font size
+    - `title_font_family` - Title font family
+    - `title_font_weight` - Title font weight (dropdown)
+    - `title_font_color` - Title font color
+    - `card_background` - Custom card background CSS
+  - Added **Transparency Options** section:
+    - `transparent_card_background` - Make card background transparent
+    - `transparent_gauge_background` - Make gauge background transparent
+    - `transparent_center_background` - Make center background transparent
+  - Added **Value & Unit Typography** per gauge:
+    - `value_font_family`, `value_font_size`, `value_font_weight`, `value_font_color`
+    - `unit_font_family`, `unit_font_size`, `unit_font_weight`, `unit_font_color`
+
+### Fixed
+- 🐛 **Card registration**
+  - Added `window.customCards` declaration for Home Assistant card picker
+  - Card now appears in the "Add Card" list with name and description
+
+### Added
 - ⚡ **Bidirectional mode for negative values**
   - New `bidirectional` option for each gauge configuration
   - Visual clarity for negative/positive values: positive displays clockwise, negative counter-clockwise
@@ -17,6 +72,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Support in markers and zones rendering for bidirectional mode
   - New utility functions: `calculateBidirectionalLeds()` and `valueToAngle()`
   - Fully backward compatible (default: `false`)
+
+## [1.2.0] - 2026-03-17
+
+### Added
+- 🎨 Visual Configuration Editor (see Unreleased for details)
 
 ## [1.1.0] - 2024-11-16
 
@@ -121,6 +181,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Example configuration in card.yaml
 - Screenshot (Capture1.png)
 
+[1.2.0]: https://github.com/guiohm79/custom-gauge-card/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/guiohm79/custom-gauge-card/compare/v1.0.4...v1.1.0
 [1.0.4]: https://github.com/guiohm79/custom-gauge-card/compare/v1.0.3.1...v1.0.4
 [1.0.3.1]: https://github.com/guiohm79/custom-gauge-card/compare/v1.0.3...v1.0.3.1
 [1.0.3]: https://github.com/guiohm79/custom-gauge-card/compare/v1.0.2...v1.0.3

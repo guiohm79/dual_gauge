@@ -1,13 +1,17 @@
 /**
  * Dual Gauge Card - Standalone Version (Non-compiled)
- * Version: 1.0.4
+ * Version: 1.2.0
+ * 
+ * Ce fichier est le point d'entrée principal qui charge :
+ * - Le core de la carte (inline ci-dessous)
+ * - L'éditeur visuel (dual-gauge-card-editor.js) chargé dynamiquement
  */
 
 // ============================================================================
 // CONFIGURATION AND THEMES
 // ============================================================================
 
-const CARD_VERSION = '1.0.4';
+const CARD_VERSION = '1.2.0';
 
 const themes = {
   default: {
@@ -301,17 +305,18 @@ const stylesCSS = `
 }
 
 .value {
-  font-family: var(--value-font-family);
   transition: all 0.3s ease;
 }
 
 #value-inner {
+  font-family: var(--value-font-family-inner);
   font-size: var(--value-font-size-inner);
   font-weight: var(--value-font-weight-inner);
   color: var(--value-font-color-inner);
 }
 
 #value-outer {
+  font-family: var(--value-font-family-outer);
   font-size: var(--value-font-size-outer);
   font-weight: var(--value-font-weight-outer);
   color: var(--value-font-color-outer);
@@ -322,12 +327,14 @@ const stylesCSS = `
 }
 
 #unit-inner {
+  font-family: var(--unit-font-family-inner);
   font-size: var(--unit-font-size-inner);
   font-weight: var(--unit-font-weight-inner);
   color: var(--unit-font-color-inner);
 }
 
 #unit-outer {
+  font-family: var(--unit-font-family-outer);
   font-size: var(--unit-font-size-outer);
   font-weight: var(--unit-font-weight-outer);
   color: var(--unit-font-color-outer);
@@ -407,14 +414,7 @@ const stylesCSS = `
   cursor: pointer;
 }
 
-.value-group.secondary {
-  opacity: 0.8;
-}
 
-/* 
-   Legacy scaling for secondary items is now handled via CSS variables 
-   generated in Javascript to allow overrides 
-*/
 
 .marker {
   position: absolute;
@@ -485,71 +485,38 @@ function renderDual(context) {
   // Déterminer le thème global de la carte (utilise le thème de la première gauge par défaut)
   const globalTheme = context.config.card_theme ? getTheme(context.config.card_theme, context.config) : theme1;
 
-  // Déterminer quelle gauge est principale (par défaut: inner = gauge 0)
-  const primaryGauge = context.config.primary_gauge || 'inner'; // 'inner' ou 'outer'
-  const isPrimaryInner = primaryGauge === 'inner';
+  // Fonction utilitaire pour normaliser les tailles CSS (ajoute px si nécessaire)
+  const normalizeSize = (size, defaultValue) => {
+    if (!size || size.trim() === '') return defaultValue;
+    const trimmed = size.trim();
+    // Si c'est déjà une valeur valide (px, em, rem, %, etc), on la retourne
+    if (/^\d+(\.\d+)?(px|em|rem|%|ex|ch|vh|vw|vmin|vmax|pt|pc|in|cm|mm|q)$/.test(trimmed)) {
+      return trimmed;
+    }
+    // Si c'est juste un nombre, on ajoute px
+    if (/^\d+(\.\d+)?$/.test(trimmed)) {
+      return trimmed + 'px';
+    }
+    // Sinon on retourne la valeur telle quelle (pour les valeurs comme 'inherit', 'auto', etc)
+    return trimmed;
+  };
 
-  // Base defaults from config1 (usually primary, or at least the reference in old code)
-  const valSize1 = config1.value_font_size || '24px';
-  const valWeight1 = config1.value_font_weight || 'bold';
-  const valColor1 = config1.value_font_color || theme1.textColor;
-  const unitSize1 = config1.unit_font_size || '14px';
-  const unitWeight1 = config1.unit_font_weight || 'normal';
-  const unitColor1 = config1.unit_font_color || theme1.secondaryTextColor;
+  // Configuration typographique pour chaque gauge (indépendante)
+  // Gauge intérieure (config1)
+  const vSizeInner = normalizeSize(config1.value_font_size, '24px');
+  const vWeightInner = config1.value_font_weight || 'bold';
+  const vColorInner = config1.value_font_color || theme1.textColor;
+  const uSizeInner = normalizeSize(config1.unit_font_size, '14px');
+  const uWeightInner = config1.unit_font_weight || 'normal';
+  const uColorInner = config1.unit_font_color || theme1.secondaryTextColor;
 
-  // Helper to parse pixel value for scaling
-  const parsePx = (val) => parseFloat(val) || 0;
-
-  // Calculate defaults for scaling if needed
-  const valSizeScaled = `${parsePx(valSize1) * 0.7}px`;
-  const unitSizeScaled = `${parsePx(unitSize1) * 0.85}px`;
-
-  // Determine actual values for Inner
-  // If inner is secondary and no config, use scaled. Otherwise use config or config1 base.
-  let vSizeInner, vWeightInner, vColorInner, uSizeInner, uWeightInner, uColorInner;
-
-  if (!isPrimaryInner && !config1.value_font_size) {
-    // Inner is secondary and has no specific config -> scale it relative to Outer? 
-    // Actually the old code always used config1 as reference. 
-    // Let's stick to the behavior: config1 is explicit, config2 is scaled if not explicit.
-    // But wait, if primary_gauge is 'outer', then 'inner' becomes secondary.
-    // The CSS logic was: .secondary gets scaled.
-    vSizeInner = valSizeScaled;
-    uSizeInner = unitSizeScaled;
-  } else {
-    vSizeInner = valSize1;
-    uSizeInner = unitSize1;
-  }
-  vWeightInner = valWeight1;
-  vColorInner = valColor1;
-  uWeightInner = unitWeight1;
-  uColorInner = unitColor1;
-
-  // Determine actual values for Outer (config2)
-  let vSizeOuter, vWeightOuter, vColorOuter, uSizeOuter, uWeightOuter, uColorOuter;
-
-  // Defaults for outer if not specified
-  const valSize2Def = isPrimaryInner ? valSizeScaled : valSize1; // If outer is secondary, scale it. Use config1 base as ref? 
-  // Actually, standard behavior was: vars set from config1. .secondary class applied scaling calc() on those vars.
-  // So if Outer is secondary, it should default to scaled version of Config1.
-
-  if (config2.value_font_size) {
-    vSizeOuter = config2.value_font_size;
-  } else {
-    vSizeOuter = isPrimaryInner ? valSizeScaled : valSize1; // simplified assumption
-  }
-
-  vWeightOuter = config2.value_font_weight || (isPrimaryInner ? valWeight1 : 'bold');
-  vColorOuter = config2.value_font_color || (isPrimaryInner ? valColor1 : theme2.textColor);
-
-  if (config2.unit_font_size) {
-    uSizeOuter = config2.unit_font_size;
-  } else {
-    uSizeOuter = isPrimaryInner ? unitSizeScaled : unitSize1;
-  }
-
-  uWeightOuter = config2.unit_font_weight || (isPrimaryInner ? unitWeight1 : 'normal');
-  uColorOuter = config2.unit_font_color || (isPrimaryInner ? unitColor1 : theme2.secondaryTextColor);
+  // Gauge extérieure (config2)
+  const vSizeOuter = normalizeSize(config2.value_font_size, '18px');
+  const vWeightOuter = config2.value_font_weight || 'bold';
+  const vColorOuter = config2.value_font_color || theme2.textColor;
+  const uSizeOuter = normalizeSize(config2.unit_font_size, '12px');
+  const uWeightOuter = config2.unit_font_weight || 'normal';
+  const uColorOuter = config2.unit_font_color || theme2.secondaryTextColor;
 
 
   const cssVariables = `
@@ -568,20 +535,22 @@ function renderDual(context) {
     --card-shadow: ${context.config.hide_shadows ? 'none' : '0 0 15px rgba(0, 0, 0, 0.5)'};
     --led-shadow: ${context.config.hide_shadows ? 'none' : '0 0 4px rgba(0, 0, 0, 0.8)'};
     
-    --value-font-family: ${config1.value_font_family || 'inherit'};
-    
+    --value-font-family-inner: ${config1.value_font_family || 'inherit'};
     --value-font-size-inner: ${vSizeInner};
     --value-font-weight-inner: ${vWeightInner};
     --value-font-color-inner: ${vColorInner};
     
+    --value-font-family-outer: ${config2.value_font_family || 'inherit'};
     --value-font-size-outer: ${vSizeOuter};
     --value-font-weight-outer: ${vWeightOuter};
     --value-font-color-outer: ${vColorOuter};
     
+    --unit-font-family-inner: ${config1.unit_font_family || 'inherit'};
     --unit-font-size-inner: ${uSizeInner};
     --unit-font-weight-inner: ${uWeightInner};
     --unit-font-color-inner: ${uColorInner};
     
+    --unit-font-family-outer: ${config2.unit_font_family || 'inherit'};
     --unit-font-size-outer: ${uSizeOuter};
     --unit-font-weight-outer: ${uWeightOuter};
     --unit-font-color-outer: ${uColorOuter};
@@ -630,11 +599,11 @@ function renderDual(context) {
         ${generateLedsHTML(ledsCount2, outerGaugeSize / 2, ledSize2, 'outer')}
         ${generateLedsHTML(ledsCount1, innerGaugeRadius, ledSize1, 'inner')}
         <div class="center dual-center" style="background: ${globalTheme.centerBackground}">
-          <div class="value-group ${isPrimaryInner ? '' : 'secondary'}" id="group-inner">
+          <div class="value-group" id="group-inner">
             <div class="value" id="value-inner">0</div>
             <div class="unit" id="unit-inner"></div>
           </div>
-          <div class="value-group ${isPrimaryInner ? 'secondary' : ''}" id="group-outer">
+          <div class="value-group" id="group-outer">
             <div class="value" id="value-outer">0</div>
             <div class="unit" id="unit-outer"></div>
           </div>
@@ -971,7 +940,7 @@ function animateValueChangeDual(context, fromValue, toValue, min, max, prefix, g
 
     const valueDisplay = context.shadowRoot?.querySelector(`#value-${prefix}`);
     if (valueDisplay) {
-      valueDisplay.textContent = currentValue.toFixed(gaugeConfig.decimals || 1);
+      valueDisplay.textContent = currentValue.toFixed(gaugeConfig.decimals ?? 1);
     }
 
     if (step >= steps) {
@@ -1045,7 +1014,7 @@ function updateDualGauge(context) {
 
     const valueDisplay1 = context.shadowRoot.querySelector("#value-inner");
     const unitDisplay1 = context.shadowRoot.querySelector("#unit-inner");
-    if (valueDisplay1) valueDisplay1.textContent = state1.toFixed(config1.decimals || 1);
+    if (valueDisplay1) valueDisplay1.textContent = state1.toFixed(config1.decimals ?? 1);
     if (unitDisplay1) unitDisplay1.textContent = config1.unit || "";
   }
 
@@ -1063,7 +1032,7 @@ function updateDualGauge(context) {
 
     const valueDisplay2 = context.shadowRoot.querySelector("#value-outer");
     const unitDisplay2 = context.shadowRoot.querySelector("#unit-outer");
-    if (valueDisplay2) valueDisplay2.textContent = state2.toFixed(config2.decimals || 1);
+    if (valueDisplay2) valueDisplay2.textContent = state2.toFixed(config2.decimals ?? 1);
     if (unitDisplay2) unitDisplay2.textContent = config2.unit || "";
   }
 
@@ -1206,10 +1175,79 @@ class DualGaugeCard extends HTMLElement {
   getCardSize() {
     return 4;
   }
+
+  // Chargement dynamique de l'éditeur
+  static async getConfigElement() {
+    // Charger l'éditeur dynamiquement s'il n'est pas déjà chargé
+    if (!customElements.get('dual-gauge-card-editor')) {
+      try {
+        // Détecter le chemin de base du script courant
+        const currentScript = document.querySelector('script[src*="dual-gauge-card"]');
+        const basePath = currentScript ? currentScript.src.replace(/\/[^\/]*$/, '/') : '/';
+        
+        // Charger le fichier éditeur
+        await import(`${basePath}dual-gauge-card-editor.js`);
+      } catch (error) {
+        console.warn('Dual Gauge Card: Failed to load editor dynamically, trying fallback...', error);
+        // Fallback: essayer de charger depuis le même répertoire
+        try {
+          await import('./dual-gauge-card-editor.js');
+        } catch (fallbackError) {
+          console.error('Dual Gauge Card: Could not load editor', fallbackError);
+          // Créer un éditeur minimal qui affiche un message d'erreur
+          return DualGaugeCard._createErrorEditor();
+        }
+      }
+    }
+    return document.createElement('dual-gauge-card-editor');
+  }
+
+  // Éditeur minimal en cas d'échec du chargement
+  static _createErrorEditor() {
+    const editor = document.createElement('div');
+    editor.style.cssText = 'padding: 16px; color: var(--error-color, #f44336);';
+    editor.innerHTML = `
+      <p><strong>Erreur de chargement de l'éditeur</strong></p>
+      <p>L'éditeur visuel n'a pas pu être chargé. Veuillez vérifier que le fichier <code>dual-gauge-card-editor.js</code> est présent dans le même répertoire que <code>dual-gauge-card.js</code>.</p>
+      <p>Vous pouvez toujours configurer la carte en mode YAML.</p>
+    `;
+    return editor;
+  }
+
+  static getStubConfig() {
+    return {
+      type: 'custom:dual-gauge-card',
+      name: 'Dual Gauge',
+      gauge_size: 200,
+      inner_gauge_size: 130,
+      title_position: 'bottom',
+      card_theme: 'default',
+      gauges: [
+        {
+          entity: '',
+          min: 0,
+          max: 100,
+          unit: '%',
+          decimals: 1,
+          leds_count: 80,
+          led_size: 6
+        },
+        {
+          entity: '',
+          min: 0,
+          max: 100,
+          unit: '%',
+          decimals: 1,
+          leds_count: 100,
+          led_size: 8
+        }
+      ]
+    };
+  }
 }
 
 // ============================================================================
-// REGISTER CUSTOM ELEMENT
+// REGISTER CUSTOM ELEMENTS
 // ============================================================================
 
 console.info(
@@ -1219,3 +1257,17 @@ console.info(
 );
 
 customElements.define("dual-gauge-card", DualGaugeCard);
+
+// ============================================================================
+// CARD REGISTRY FOR HOME ASSISTANT
+// ============================================================================
+
+// Déclaration de la carte pour l'afficher dans la liste des cartes disponibles
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: 'dual-gauge-card',
+  name: 'Dual Gauge Card',
+  description: 'Carte avec deux jauges LED concentriques',
+  preview: true,
+  documentationURL: 'https://github.com/guiohm79/custom-gauge-card'
+});
