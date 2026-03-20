@@ -2,6 +2,7 @@ CLAUDE.md
 .claude/
 .claude/settings.local.json
 *.bak
+AGENTS.md
 # Build artifacts
 node_modules/
 
