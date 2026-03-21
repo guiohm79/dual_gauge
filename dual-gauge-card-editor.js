@@ -217,18 +217,8 @@ class DualGaugeCardEditor extends HTMLElement {
   }
 
   _updatePickerValues() {
-    // Update entity picker values without recreating them
-    if (!this._config?.gauges) return;
-    
-    for (let i = 0; i < 2; i++) {
-      const picker = this.shadowRoot.getElementById(`gauge${i}_entity`);
-      if (picker && this._config.gauges[i]) {
-        const entityId = this._config.gauges[i].entity || '';
-        if (picker.value !== entityId) {
-          picker.value = entityId;
-        }
-      }
-    }
+    // Entity pickers are now simple text inputs
+    // Values are updated via _updateAllFieldValues()
   }
 
   _updateAllFieldValues() {
@@ -313,24 +303,35 @@ class DualGaugeCardEditor extends HTMLElement {
       setValue(`gauge${i}_unit_font_color`, gauge.unit_font_color || '#dddddd');
       setValue(`gauge${i}_unit_font_color_text`, gauge.unit_font_color || '');
     }
-    
-    // Also update entity pickers
-    this._updateEntityPickers();
   }
 
   set hass(hass) {
     const oldHass = this._hass;
     this._hass = hass;
     
-    // Update entity-pickers if already rendered
-    if (this.shadowRoot) {
-      this._updateEntityPickers();
-    }
-    
     // If hass is set for the first time and we already have a config, render
     if (!oldHass && hass && this._config && !this._hasRendered) {
       this._hasRendered = true;
       this._render();
+    }
+    
+    // Update entity select options if hass is now available and we have a rendered shadowRoot
+    if (hass && this.shadowRoot && this._hasRendered) {
+      this._updateEntitySelects();
+    }
+  }
+
+  _updateEntitySelects() {
+    // Update entity select options when hass becomes available
+    if (!this._hass || !this._hass.states) return;
+    
+    for (let i = 0; i < 2; i++) {
+      const select = this.shadowRoot.getElementById(`gauge${i}_entity`);
+      if (select) {
+        const currentValue = this._config?.gauges?.[i]?.entity || '';
+        const optionsHtml = this._renderEntityOptions(currentValue);
+        select.innerHTML = optionsHtml;
+      }
     }
   }
 
@@ -631,21 +632,8 @@ class DualGaugeCardEditor extends HTMLElement {
   }
 
   _updateEntityPickers() {
-    // Update entity pickers with hass and current value
-    if (!this.shadowRoot || !this._hass) return;
-    
-    for (let i = 0; i < 2; i++) {
-      const picker = this.shadowRoot.getElementById(`gauge${i}_entity`);
-      if (picker) {
-        // Assign hass (necessary for the picker to work)
-        picker.hass = this._hass;
-        
-        // Assign value if it exists in config
-        if (this._config?.gauges?.[i]?.entity) {
-          picker.value = this._config.gauges[i].entity;
-        }
-      }
-    }
+    // Entity pickers are now select dropdowns
+    this._updateEntitySelects();
   }
 
   _renderCustomThemeSection(config) {
@@ -772,6 +760,20 @@ class DualGaugeCardEditor extends HTMLElement {
     `;
   }
 
+  _renderEntityOptions(selectedEntity) {
+    if (!this._hass || !this._hass.states) {
+      return `<option value="">${this._t('selectEntity')}</option>`;
+    }
+    
+    const entities = Object.keys(this._hass.states).sort();
+    const options = entities.map(entityId => {
+      const selected = entityId === selectedEntity ? 'selected' : '';
+      return `<option value="${entityId}" ${selected}>${entityId}</option>`;
+    }).join('');
+    
+    return `<option value="">-- ${this._t('selectEntity')} --</option>${options}`;
+  }
+
   _renderGaugeSection(index, gauge, title, cssClass) {
     const severity = gauge.severity || [
       { color: '#4caf50', value: 0 },
@@ -786,14 +788,11 @@ class DualGaugeCardEditor extends HTMLElement {
         <div class="section-title">${title}</div>
         
         <div class="row">
-          <div class="field full entity-picker-wrapper">
+          <div class="field full">
             <label>${this._t('entity')}</label>
-            <ha-entity-picker
-              id="gauge${index}_entity"
-              value="${gauge.entity || ''}"
-              label="${this._t('selectEntity')}"
-              allow-custom-entity
-            ></ha-entity-picker>
+            <select id="gauge${index}_entity">
+              ${this._renderEntityOptions(gauge.entity)}
+            </select>
           </div>
         </div>
 
@@ -1051,23 +1050,6 @@ class DualGaugeCardEditor extends HTMLElement {
       });
     });
 
-    // Entity picker specific - use capturing to ensure we receive the event
-    const entityPickers = this.shadowRoot.querySelectorAll('ha-entity-picker');
-    entityPickers.forEach(picker => {
-      picker.addEventListener('value-changed', (e) => {
-        e.stopPropagation();
-        // Update value directly on picker
-        picker.value = e.detail.value;
-        // Update config immediately for this entity
-        const pickerId = picker.id;
-        const gaugeIndex = parseInt(pickerId.replace('gauge', '').replace('_entity', ''));
-        if (!isNaN(gaugeIndex) && this._config.gauges && this._config.gauges[gaugeIndex]) {
-          this._config.gauges[gaugeIndex].entity = e.detail.value || '';
-        }
-        this._fireConfigChanged();
-      });
-    });
-
     // Add/remove buttons
     const buttons = this.shadowRoot.querySelectorAll('button[data-action]');
     buttons.forEach(btn => {
@@ -1187,10 +1169,6 @@ class DualGaugeCardEditor extends HTMLElement {
     const getInputValue = (id) => {
       const el = this.shadowRoot.getElementById(id);
       if (!el) return undefined;
-      // Special handling for ha-entity-picker
-      if (el.tagName === 'HA-ENTITY-PICKER') {
-        return el.value || '';
-      }
       if (el.type === 'checkbox') return el.checked;
       if (el.type === 'number') {
         const val = parseFloat(el.value);
@@ -1294,10 +1272,6 @@ class DualGaugeCardEditor extends HTMLElement {
     const getValue = (id) => {
       const el = this.shadowRoot.getElementById(id);
       if (!el) return undefined;
-      // Special handling for ha-entity-picker
-      if (el.tagName === 'HA-ENTITY-PICKER') {
-        return el.value || '';
-      }
       if (el.type === 'checkbox') return el.checked;
       if (el.type === 'number') {
         const val = parseFloat(el.value);
@@ -1367,10 +1341,6 @@ class DualGaugeCardEditor extends HTMLElement {
     const getValue = (id) => {
       const el = this.shadowRoot.getElementById(id);
       if (!el) return undefined;
-      // Special handling for ha-entity-picker
-      if (el.tagName === 'HA-ENTITY-PICKER') {
-        return el.value || '';
-      }
       if (el.type === 'checkbox') return el.checked;
       if (el.type === 'number') {
         const val = parseFloat(el.value);

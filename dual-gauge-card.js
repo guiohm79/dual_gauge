@@ -555,7 +555,7 @@ function renderDual(context) {
     --unit-font-weight-outer: ${uWeightOuter};
     --unit-font-color-outer: ${uColorOuter};
 
-    --title-font-size: ${context.config.title_font_size || '16px'};
+    --title-font-size: ${normalizeSize(context.config.title_font_size, '16px')};
     --title-font-family: ${context.config.title_font_family || 'inherit'};
     --title-font-weight: ${context.config.title_font_weight || 'normal'};
     --title-font-color: ${context.config.title_font_color || globalTheme.textColor};
