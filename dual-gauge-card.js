@@ -644,6 +644,8 @@ function addMarkersAndZones(context) {
     const markersRadius1 = config1.markers_radius !== undefined
       ? config1.markers_radius
       : innerGaugeRadius;
+    // Labels inside by default (true or undefined), outside if false
+    const markersInside1 = config1.markers_inside !== false;
 
     config1.markers.forEach(marker => {
       const angle = valueToAngle(marker.value, min1, max1, config1.bidirectional || false);
@@ -669,8 +671,9 @@ function addMarkersAndZones(context) {
       `;
 
       if (marker.label) {
-        const labelX = (markersRadius1 + 10) * Math.cos(angleRad);
-        const labelY = (markersRadius1 + 10) * Math.sin(angleRad);
+        const labelOffset = markersInside1 ? -16 : 16;
+        const labelX = (markersRadius1 + labelOffset) * Math.cos(angleRad);
+        const labelY = (markersRadius1 + labelOffset) * Math.sin(angleRad);
 
         const labelElement = document.createElement('div');
         labelElement.className = 'marker-label';
@@ -700,6 +703,8 @@ function addMarkersAndZones(context) {
     const markersRadius2 = config2.markers_radius !== undefined
       ? config2.markers_radius
       : (outerGaugeSize / 2);
+    // Labels inside by default (true or undefined), outside if false
+    const markersInside2 = config2.markers_inside !== false;
 
     config2.markers.forEach(marker => {
       const angle = valueToAngle(marker.value, min2, max2, config2.bidirectional || false);
@@ -725,8 +730,9 @@ function addMarkersAndZones(context) {
       `;
 
       if (marker.label) {
-        const labelX = (markersRadius2 + 10) * Math.cos(angleRad);
-        const labelY = (markersRadius2 + 10) * Math.sin(angleRad);
+        const labelOffset = markersInside2 ? -16 : 16;
+        const labelX = (markersRadius2 + labelOffset) * Math.cos(angleRad);
+        const labelY = (markersRadius2 + labelOffset) * Math.sin(angleRad);
 
         const labelElement = document.createElement('div');
         labelElement.className = 'marker-label';

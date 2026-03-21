@@ -59,6 +59,7 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 - Define colored zones to visualize value ranges
 - Add markers with labels for specific reference points
 - Flexible positioning with adjustable radius
+- Labels inside or outside the gauge
 - Separate configuration for each gauge
 
 **Customizable Themes**
@@ -69,6 +70,7 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 
 **Flexible Layout**
 - Configurable title position (top, bottom, inside-top, inside-bottom, none)
+- Configurable title typography (font size, family, weight, color)
 - Transparent card mode (no frame/background)
 - Adjustable gauge spacing
 - Responsive design
@@ -138,7 +140,12 @@ gauges:
 | Option | Type | Default | Description |
 |--------|------|--------|-------------|
 | `name` | string | - | Title displayed |
+| `name` | string | - | Title displayed |
 | `title_position` | string | 'bottom' | Title position ('bottom', 'top', 'inside-top', 'inside-bottom', 'none') |
+| `title_font_size` | string | '16px' | Title font size (e.g., '18px', '1.2em') |
+| `title_font_family` | string | inherit | Title font family (e.g., 'Roboto, Arial') |
+| `title_font_weight` | string | 'normal' | Title font weight ('normal', 'bold', '100'-'900') |
+| `title_font_color` | string | - | Title font color (e.g., '#ffffff') |
 | `hide_card` | boolean | false | Remove card frame, background and shadow (transparent integration) |
 | `gauge_size` | number | 200 | Outer gauge size in pixels |
 | `inner_gauge_size` | number | 65% | Inner gauge visual size in pixels |
@@ -340,6 +347,7 @@ gauges:
 | Option | Type | Default | Description |
 |--------|------|--------|-------------|
 | `markers_radius` | number | Gauge radius | Marker positioning radius in pixels |
+| `markers_inside` | boolean | true | Place marker labels inside the gauge (false = outside) |
 | `markers` | array | - | List of markers to display |
 
 **Marker Properties:**
@@ -361,6 +369,19 @@ gauges:
 gauges:
   - entity: sensor.temperature
     markers_radius: 100       # Larger = farther from center
+```
+
+**Marker Label Position:**
+```yaml
+# Labels inside the gauge (default)
+gauges:
+  - entity: sensor.temperature
+    markers_inside: true      # Labels between center and marker line
+
+# Labels outside the gauge
+gauges:
+  - entity: sensor.temperature
+    markers_inside: false     # Labels beyond the marker line
 ```
 
 #### Zones
@@ -417,6 +438,28 @@ title_position: inside-top   # Recommended with hide_card
 **Recommendations:**
 - Use `title_position: inside-top` or `inside-bottom` to keep title visible
 - Or use `title_position: none` for ultra-minimalist design
+
+### Title Typography
+
+Customize the title appearance with these options:
+
+```yaml
+type: custom:dual-gauge-card
+name: "Living Room Temperature"
+title_font_size: '18px'
+title_font_family: 'Roboto, Arial, sans-serif'
+title_font_weight: 'bold'
+title_font_color: '#00ff00'
+```
+
+**Title Typography Options:**
+
+| Option | Type | Default | Description |
+|--------|------|--------|-------------|
+| `title_font_size` | string | '16px' | Font size (e.g., '18px', '1.2em', 'large') |
+| `title_font_family` | string | inherit | Font family (e.g., 'Roboto, Arial') |
+| `title_font_weight` | string | 'normal' | Font weight ('normal', 'bold', 'lighter', '100'-'900') |
+| `title_font_color` | string | theme color | Font color (e.g., '#ffffff', 'red') |
 
 ### Title Position
 

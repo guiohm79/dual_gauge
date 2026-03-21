@@ -95,6 +95,8 @@ const translations = {
     
     // Markers
     markers: 'Markers',
+    markersRadius: 'Markers Radius (px)',
+    markersInside: 'Labels Inside',
     addMarker: '+ Add Marker',
     
     // Zones
@@ -267,6 +269,8 @@ class DualGaugeCardEditor extends HTMLElement {
       setValue(`gauge${i}_decimals`, gauge.decimals ?? 1);
       setValue(`gauge${i}_leds_count`, gauge.leds_count || (i === 0 ? 80 : 100));
       setValue(`gauge${i}_led_size`, gauge.led_size || (i === 0 ? 6 : 8));
+      setValue(`gauge${i}_markers_radius`, gauge.markers_radius !== undefined ? gauge.markers_radius : '');
+      setChecked(`gauge${i}_markers_inside`, gauge.markers_inside !== false);
       setValue(`gauge${i}_theme`, gauge.theme || 'default');
       setValue(`gauge${i}_animation_duration`, gauge.animation_duration || 800);
       
@@ -908,6 +912,16 @@ class DualGaugeCardEditor extends HTMLElement {
 
         <div class="sub-section">
           <div class="sub-title">${this._t('markers')}</div>
+          <div class="row">
+            <div class="field">
+              <label>${this._t('markersRadius')}</label>
+              <input type="number" id="gauge${index}_markers_radius" value="${gauge.markers_radius !== undefined ? gauge.markers_radius : ''}" placeholder="Auto" min="10" max="300" step="1">
+            </div>
+            <div class="field checkbox">
+              <input type="checkbox" id="gauge${index}_markers_inside" ${gauge.markers_inside !== false ? 'checked' : ''}>
+              <label for="gauge${index}_markers_inside">${this._t('markersInside')}</label>
+            </div>
+          </div>
           <div class="markers-list" id="gauge${index}_markers_list">
             ${markers.map((m, i) => `
               <div class="marker-item" data-index="${i}">
@@ -1221,6 +1235,8 @@ class DualGaugeCardEditor extends HTMLElement {
       this._config.gauges[i].decimals = getInputValue(`gauge${i}_decimals`) ?? this._config.gauges[i].decimals ?? 1;
       this._config.gauges[i].leds_count = getInputValue(`gauge${i}_leds_count`) ?? this._config.gauges[i].leds_count ?? (i === 0 ? 80 : 100);
       this._config.gauges[i].led_size = getInputValue(`gauge${i}_led_size`) ?? this._config.gauges[i].led_size ?? (i === 0 ? 6 : 8);
+      this._config.gauges[i].markers_radius = getInputValue(`gauge${i}_markers_radius`) ?? this._config.gauges[i].markers_radius ?? undefined;
+      this._config.gauges[i].markers_inside = getInputValue(`gauge${i}_markers_inside`) ?? this._config.gauges[i].markers_inside ?? true;
       this._config.gauges[i].theme = getInputValue(`gauge${i}_theme`) ?? this._config.gauges[i].theme ?? 'default';
       this._config.gauges[i].animation_duration = getInputValue(`gauge${i}_animation_duration`) ?? this._config.gauges[i].animation_duration ?? 800;
       this._config.gauges[i].bidirectional = getInputValue(`gauge${i}_bidirectional`) ?? this._config.gauges[i].bidirectional ?? false;
@@ -1357,6 +1373,8 @@ class DualGaugeCardEditor extends HTMLElement {
       decimals: getValue(`gauge${index}_decimals`) !== undefined ? getValue(`gauge${index}_decimals`) : 1,
       leds_count: getValue(`gauge${index}_leds_count`) !== undefined ? getValue(`gauge${index}_leds_count`) : (index === 0 ? 80 : 100),
       led_size: getValue(`gauge${index}_led_size`) !== undefined ? getValue(`gauge${index}_led_size`) : (index === 0 ? 6 : 8),
+      markers_radius: getValue(`gauge${index}_markers_radius`) !== undefined ? getValue(`gauge${index}_markers_radius`) : undefined,
+      markers_inside: getValue(`gauge${index}_markers_inside`) !== false,
       theme: getValue(`gauge${index}_theme`) || 'default',
       animation_duration: getValue(`gauge${index}_animation_duration`) !== undefined ? getValue(`gauge${index}_animation_duration`) : 800,
       bidirectional: getValue(`gauge${index}_bidirectional`) || false,
