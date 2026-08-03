@@ -47,6 +47,7 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 - Separate configuration for each gauge
 - Configurable primary value display (choose which value shows large)
 - Adjustable gauge spacing
+- Adjustable start angle and arc length per gauge (full circle, 270°, half circle...)
 - bidirectional for negative values
 
 **Advanced Shadow System**
@@ -190,7 +191,7 @@ The `bidirectional` option enables support for displaying negative values with v
 
 - **Positive values** display clockwise (right side) from the top (12 o'clock position)
 - **Negative values** display counter-clockwise (left side) from the top
-- **Zero point** is always at the top of the gauge
+- **Zero point** is at the start of the gauge, i.e. the top by default (see `start_angle`)
 - **LED allocation** is proportional to the range on each side of zero
 
 This is perfect for:
@@ -227,6 +228,8 @@ gauges:
 |--------|------|--------|-------------|
 | `leds_count` | number | 100 | Number of LEDs on the circle |
 | `led_size` | number | 8 (outer) / 6 (inner) | LED size in pixels |
+| `start_angle` | number | 0 | Offset of the gauge starting point, in degrees (see below) |
+| `arc_length` | number | 360 | Angular span of the gauge, in degrees (see below) |
 | `hide_inactive_leds` | boolean | false | Hide inactive LEDs |
 | `value_font_size` | string | '24px' | Font size for value (e.g. '30px') |
 | `value_font_weight` | string | 'bold' | Font weight for value |
@@ -524,6 +527,61 @@ inner_gauge_radius: 100     # Almost touching
 ```
 
 **Note:** The larger `inner_gauge_radius` is, the **closer** the inner gauge gets to the outer gauge.
+
+### Arc Geometry (Start Angle & Arc Length)
+
+Each gauge can be rotated and shortened independently with two options, both configurable
+from the visual editor (section **Arc Geometry**):
+
+| Option | Type | Default | Description |
+|--------|------|--------|-------------|
+| `start_angle` | number | 0 | Where the gauge starts. `0` = top (12 o'clock), positive values rotate clockwise. Accepts -360 to 360 |
+| `arc_length` | number | 360 | How much of the circle the gauge covers. `360` = full circle, `180` = half circle. Values above 360 are clamped |
+
+```yaml
+# Classic car-dashboard look: 270° arc opening at the bottom
+gauges:
+  - entity: sensor.temp_inside
+    start_angle: -135     # start at the lower-left
+    arc_length: 270       # end at the lower-right
+  - entity: sensor.temp_outside
+    start_angle: -135
+    arc_length: 270
+```
+
+```yaml
+# Half circle (speedometer style), inner and outer aligned
+gauges:
+  - entity: sensor.power_now
+    start_angle: -90      # start on the left
+    arc_length: 180       # end on the right
+  - entity: sensor.power_max
+    start_angle: -90
+    arc_length: 180
+```
+
+```yaml
+# Rotate a full circle so that the seam (min/max) sits at the bottom
+gauges:
+  - entity: sensor.humidity
+    start_angle: 180
+  - entity: sensor.temperature
+    start_angle: 180
+```
+
+**How it behaves:**
+
+- On a **full circle** (`arc_length: 360`), the first and last LED would overlap, so LEDs are
+  spread over the circle without a LED on the closing point. On a **partial arc**, both ends of
+  the arc carry a LED, so `min` sits exactly at the start of the arc and `max` exactly at its end.
+- **Markers and zones follow the arc**: they are placed with the same start angle and span as
+  the LEDs, so they stay aligned with their gauge.
+- The two gauges are independent: you can keep the outer one a full circle and make the inner
+  one a 180° arc.
+- In **bidirectional mode**, the reference point (zero) stays at the start of the arc on a full
+  circle — unchanged behaviour. On a partial arc there is nothing to wrap around, so the
+  reference point is placed proportionally inside the arc: `min` sits at the start, `max` at the
+  end, and the LEDs light up from the reference point towards either end.
 
 ## Usage Examples
 

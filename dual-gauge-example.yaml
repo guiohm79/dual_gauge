@@ -149,3 +149,50 @@ gauges:
 
 hide_shadows: false
 title_position: top
+
+---
+# EXEMPLE AVEC ARC PARTIEL
+# start_angle décale le point de départ (0° = haut, sens horaire)
+# arc_length définit l'ouverture de la jauge en degrés (360° = cercle complet)
+
+type: custom:dual-gauge-card
+name: "Chaudière"
+gauge_size: 220
+inner_gauge_size: 140
+title_position: bottom
+
+gauges:
+  # Gauge intérieure : arc de 270° ouvert en bas (style tableau de bord)
+  - entity: sensor.temperature_depart
+    unit: "°C"
+    min: 0
+    max: 90
+    decimals: 0
+    start_angle: -135   # Départ en bas à gauche
+    arc_length: 270     # Fin en bas à droite
+    leds_count: 80
+    led_size: 6
+    markers:
+      - value: 45
+        color: "#ffffff"
+        label: "45°"
+
+  # Gauge extérieure : même géométrie pour rester alignée
+  - entity: sensor.temperature_retour
+    unit: "°C"
+    min: 0
+    max: 90
+    decimals: 0
+    start_angle: -135
+    arc_length: 270
+    leds_count: 100
+    led_size: 8
+    zones:
+      - from: 0
+        to: 30
+        color: "#0288d1"
+        opacity: 0.4
+      - from: 70
+        to: 90
+        color: "#f44336"
+        opacity: 0.4

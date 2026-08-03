@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-08-03
+
+### Added
+- 📐 **Arc geometry per gauge** — configurable from the visual editor (new *Arc Geometry* section)
+  - `start_angle` (degrees, default `0`): offsets the starting point of a gauge. `0` = top
+    (12 o'clock), positive values rotate clockwise
+  - `arc_length` (degrees, default `360`): angular span of a gauge. `360` = full circle,
+    `270` = car-dashboard style, `180` = half circle. Values above 360 are clamped
+  - Both options are independent for the inner and the outer gauge
+  - LEDs, markers and zones all follow the arc, so they stay aligned with their gauge
+  - On a partial arc, both ends carry a LED (`min` exactly at the start, `max` exactly at the end);
+    on a full circle the LEDs keep their previous distribution
+  - In bidirectional mode on a partial arc, the reference point is placed proportionally inside
+    the arc so both sides stay visible (full-circle behaviour is unchanged)
+
+### Fixed
+- 🐛 Calling `setConfig()` twice on the same card (live preview in the editor) threw
+  `NotSupportedError: Shadow root cannot be created on a host which already hosts one`
+- 🐛 The card no longer throws when `hass` is set before `setConfig()`
+
+### Changed
+- ✅ **Home Assistant compliance of the visual editor**
+  - `config-changed` and `hass-more-info` are now real `CustomEvent`s with a `detail` payload
+    instead of a plain `Event` with a property attached to it
+  - The editor now preserves configuration keys it does not manage (`view_layout`,
+    `grid_options`, `visibility`, per-gauge `tap_action`, ...) instead of dropping them on
+    every change
+  - Clearing an optional field in the editor now removes the key from the YAML instead of
+    leaving the previous value behind
+  - All configuration values are HTML-escaped before being injected in the editor markup, so a
+    quote in a card name, a font family or a marker label can no longer break the form
+
 ## [1.3.0] - 2026-03-20
 
 ### Major Changes
