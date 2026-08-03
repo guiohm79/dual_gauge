@@ -1,6 +1,6 @@
 /**
  * Dual Gauge Card Editor - Visual Configuration Editor
- * Version: 1.3.0
+ * Version: 1.4.0
  * 
  * This file is dynamically loaded by dual-gauge-card.js
  * when the user opens the visual editor.
@@ -76,7 +76,13 @@ const translations = {
     ledSize: 'LED Size (px)',
     theme: 'Theme',
     animationDuration: 'Animation Duration (ms)',
-    
+
+    // Arc geometry
+    arcGeometry: 'Arc Geometry',
+    startAngle: 'Start Angle (°)',
+    arcLength: 'Arc Length (°)',
+    arcGeometryHelp: 'Start angle offsets the beginning of the gauge: 0° = top (12 o\'clock), positive values rotate clockwise. Arc length is the angular span of the gauge: 360° = full circle, 180° = half circle.',
+
     // Gauge options
     bidirectionalMode: 'Bidirectional Mode',
     hideInactiveLeds: 'Hide Inactive LEDs',
@@ -130,6 +136,27 @@ const translations = {
     selectEntity: 'Select an entity'
   }
 };
+
+// ============================================================================
+// UTILITIES
+// ============================================================================
+
+/**
+ * Escape a value before interpolating it into the editor markup.
+ * The editor is built with innerHTML, so a quote in a name, a font family or a marker
+ * label would otherwise break out of its attribute.
+ * @param {*} value - Value coming from the card configuration
+ * @returns {string} HTML-safe string
+ */
+function esc(value) {
+  if (value === undefined || value === null) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 // ============================================================================
 // VISUAL EDITOR CLASS
@@ -269,6 +296,8 @@ class DualGaugeCardEditor extends HTMLElement {
       setValue(`gauge${i}_decimals`, gauge.decimals ?? 1);
       setValue(`gauge${i}_leds_count`, gauge.leds_count || (i === 0 ? 80 : 100));
       setValue(`gauge${i}_led_size`, gauge.led_size || (i === 0 ? 6 : 8));
+      setValue(`gauge${i}_start_angle`, gauge.start_angle !== undefined ? gauge.start_angle : 0);
+      setValue(`gauge${i}_arc_length`, gauge.arc_length !== undefined ? gauge.arc_length : 360);
       setValue(`gauge${i}_markers_radius`, gauge.markers_radius !== undefined ? gauge.markers_radius : '');
       setChecked(`gauge${i}_markers_inside`, gauge.markers_inside !== false);
       setValue(`gauge${i}_theme`, gauge.theme || 'default');
@@ -328,14 +357,21 @@ class DualGaugeCardEditor extends HTMLElement {
   _updateEntitySelects() {
     // Update entity select options when hass becomes available
     if (!this._hass || !this._hass.states) return;
-    
+
     for (let i = 0; i < 2; i++) {
       const select = this.shadowRoot.getElementById(`gauge${i}_entity`);
-      if (select) {
-        const currentValue = this._config?.gauges?.[i]?.entity || '';
-        const optionsHtml = this._renderEntityOptions(currentValue);
-        select.innerHTML = optionsHtml;
-      }
+      if (!select) continue;
+
+      const currentValue = this._config?.gauges?.[i]?.entity || '';
+
+      // Home Assistant pushes a new hass object on every state change. Rebuilding the whole
+      // entity list each time would freeze the editor, so only rebuild when the list of
+      // entities or the selection actually changed.
+      const signature = `${Object.keys(this._hass.states).length}|${currentValue}`;
+      if (select.dataset.signature === signature) continue;
+
+      select.innerHTML = this._renderEntityOptions(currentValue);
+      select.dataset.signature = signature;
     }
   }
 
@@ -553,22 +589,22 @@ class DualGaugeCardEditor extends HTMLElement {
         <div class="row">
           <div class="field full">
             <label>${this._t('cardName')}</label>
-            <input type="text" id="name" value="${config.name || ''}" placeholder="Dual Gauge">
+            <input type="text" id="name" value="${esc(config.name || '')}" placeholder="Dual Gauge">
           </div>
         </div>
 
         <div class="row">
           <div class="field">
             <label>${this._t('outerGaugeSize')}</label>
-            <input type="number" id="gauge_size" value="${config.gauge_size || 200}" min="100" max="400">
+            <input type="number" id="gauge_size" value="${esc(config.gauge_size || 200)}" min="100" max="400">
           </div>
           <div class="field">
             <label>${this._t('innerGaugeSize')}</label>
-            <input type="number" id="inner_gauge_size" value="${config.inner_gauge_size || 130}" min="80" max="300">
+            <input type="number" id="inner_gauge_size" value="${esc(config.inner_gauge_size || 130)}" min="80" max="300">
           </div>
           <div class="field">
             <label>${this._t('innerGaugeRadius')}</label>
-            <input type="number" id="inner_gauge_radius" value="${config.inner_gauge_radius || 65}" min="40" max="150">
+            <input type="number" id="inner_gauge_radius" value="${esc(config.inner_gauge_radius || 65)}" min="40" max="150">
           </div>
         </div>
 
@@ -616,7 +652,7 @@ class DualGaugeCardEditor extends HTMLElement {
           </div>
           <div class="field">
             <label>${this._t('updateInterval')}</label>
-            <input type="number" id="update_interval" value="${config.update_interval || 1000}" min="100" max="10000" step="100">
+            <input type="number" id="update_interval" value="${esc(config.update_interval || 1000)}" min="100" max="10000" step="100">
           </div>
         </div>
       </div>
@@ -650,22 +686,22 @@ class DualGaugeCardEditor extends HTMLElement {
           <div class="field">
             <label>${this._t('cardBackground')}</label>
             <div class="color-row">
-              <input type="color" id="custom_background" value="${config.custom_background || '#222222'}" data-field="color">
-              <input type="text" id="custom_background_text" value="${config.custom_background || '#222222'}" placeholder="#222222" data-field="color_text">
+              <input type="color" id="custom_background" value="${esc(config.custom_background || '#222222')}" data-field="color">
+              <input type="text" id="custom_background_text" value="${esc(config.custom_background || '#222222')}" placeholder="#222222" data-field="color_text">
             </div>
           </div>
           <div class="field">
             <label>${this._t('gaugeBackground')}</label>
             <div class="color-row">
-              <input type="color" id="custom_gauge_background" value="${config.custom_gauge_background?.startsWith('#') ? config.custom_gauge_background : '#444444'}" data-field="color">
-              <input type="text" id="custom_gauge_background_text" value="${config.custom_gauge_background || '#444444'}" placeholder="#444444 or gradient" data-field="color_text">
+              <input type="color" id="custom_gauge_background" value="${esc(config.custom_gauge_background?.startsWith('#') ? config.custom_gauge_background : '#444444')}" data-field="color">
+              <input type="text" id="custom_gauge_background_text" value="${esc(config.custom_gauge_background || '#444444')}" placeholder="#444444 or gradient" data-field="color_text">
             </div>
           </div>
           <div class="field">
             <label>${this._t('centerBackground')}</label>
             <div class="color-row">
-              <input type="color" id="custom_center_background" value="${config.custom_center_background?.startsWith('#') ? config.custom_center_background : '#333333'}" data-field="color">
-              <input type="text" id="custom_center_background_text" value="${config.custom_center_background || '#333333'}" placeholder="#333333 or gradient" data-field="color_text">
+              <input type="color" id="custom_center_background" value="${esc(config.custom_center_background?.startsWith('#') ? config.custom_center_background : '#333333')}" data-field="color">
+              <input type="text" id="custom_center_background_text" value="${esc(config.custom_center_background || '#333333')}" placeholder="#333333 or gradient" data-field="color_text">
             </div>
           </div>
         </div>
@@ -674,15 +710,15 @@ class DualGaugeCardEditor extends HTMLElement {
           <div class="field">
             <label>${this._t('primaryTextColor')}</label>
             <div class="color-row">
-              <input type="color" id="custom_text_color" value="${config.custom_text_color || '#ffffff'}" data-field="color">
-              <input type="text" id="custom_text_color_text" value="${config.custom_text_color || '#ffffff'}" placeholder="#ffffff" data-field="color_text">
+              <input type="color" id="custom_text_color" value="${esc(config.custom_text_color || '#ffffff')}" data-field="color">
+              <input type="text" id="custom_text_color_text" value="${esc(config.custom_text_color || '#ffffff')}" placeholder="#ffffff" data-field="color_text">
             </div>
           </div>
           <div class="field">
             <label>${this._t('secondaryTextColor')}</label>
             <div class="color-row">
-              <input type="color" id="custom_secondary_text_color" value="${config.custom_secondary_text_color || '#dddddd'}" data-field="color">
-              <input type="text" id="custom_secondary_text_color_text" value="${config.custom_secondary_text_color || '#dddddd'}" placeholder="#dddddd" data-field="color_text">
+              <input type="color" id="custom_secondary_text_color" value="${esc(config.custom_secondary_text_color || '#dddddd')}" data-field="color">
+              <input type="text" id="custom_secondary_text_color_text" value="${esc(config.custom_secondary_text_color || '#dddddd')}" placeholder="#dddddd" data-field="color_text">
             </div>
           </div>
         </div>
@@ -698,11 +734,11 @@ class DualGaugeCardEditor extends HTMLElement {
         <div class="row">
           <div class="field">
             <label>${this._t('fontSize')}</label>
-            <input type="text" id="title_font_size" value="${config.title_font_size || '16px'}" placeholder="16px">
+            <input type="text" id="title_font_size" value="${esc(config.title_font_size || '16px')}" placeholder="16px">
           </div>
           <div class="field">
             <label>${this._t('fontFamily')}</label>
-            <input type="text" id="title_font_family" value="${config.title_font_family || ''}" placeholder="inherit">
+            <input type="text" id="title_font_family" value="${esc(config.title_font_family || '')}" placeholder="inherit">
           </div>
           <div class="field">
             <label>${this._t('fontWeight')}</label>
@@ -727,13 +763,13 @@ class DualGaugeCardEditor extends HTMLElement {
           <div class="field">
             <label>${this._t('titleColor')}</label>
             <div class="color-row">
-              <input type="color" id="title_font_color" value="${config.title_font_color || '#ffffff'}" data-field="color">
-              <input type="text" id="title_font_color_text" value="${config.title_font_color || ''}" placeholder="Auto" data-field="color_text">
+              <input type="color" id="title_font_color" value="${esc(config.title_font_color || '#ffffff')}" data-field="color">
+              <input type="text" id="title_font_color_text" value="${esc(config.title_font_color || '')}" placeholder="Auto" data-field="color_text">
             </div>
           </div>
           <div class="field">
             <label>${this._t('cardBackgroundCss')}</label>
-            <input type="text" id="card_background" value="${config.card_background || ''}" placeholder="e.g. #222 or gradient">
+            <input type="text" id="card_background" value="${esc(config.card_background || '')}" placeholder="e.g. #222 or gradient">
           </div>
         </div>
       </div>
@@ -772,7 +808,7 @@ class DualGaugeCardEditor extends HTMLElement {
     const entities = Object.keys(this._hass.states).sort();
     const options = entities.map(entityId => {
       const selected = entityId === selectedEntity ? 'selected' : '';
-      return `<option value="${entityId}" ${selected}>${entityId}</option>`;
+      return `<option value="${esc(entityId)}" ${selected}>${esc(entityId)}</option>`;
     }).join('');
     
     return `<option value="">-- ${this._t('selectEntity')} --</option>${options}`;
@@ -803,30 +839,45 @@ class DualGaugeCardEditor extends HTMLElement {
         <div class="row">
           <div class="field">
             <label>${this._t('minValue')}</label>
-            <input type="number" id="gauge${index}_min" value="${gauge.min !== undefined ? gauge.min : 0}" step="any">
+            <input type="number" id="gauge${index}_min" value="${esc(gauge.min !== undefined ? gauge.min : 0)}" step="any">
           </div>
           <div class="field">
             <label>${this._t('maxValue')}</label>
-            <input type="number" id="gauge${index}_max" value="${gauge.max !== undefined ? gauge.max : 100}" step="any">
+            <input type="number" id="gauge${index}_max" value="${esc(gauge.max !== undefined ? gauge.max : 100)}" step="any">
           </div>
           <div class="field">
             <label>${this._t('unit')}</label>
-            <input type="text" id="gauge${index}_unit" value="${gauge.unit || ''}" placeholder="%">
+            <input type="text" id="gauge${index}_unit" value="${esc(gauge.unit || '')}" placeholder="%">
           </div>
         </div>
 
         <div class="row">
           <div class="field">
             <label>${this._t('decimals')}</label>
-            <input type="number" id="gauge${index}_decimals" value="${gauge.decimals !== undefined ? gauge.decimals : 1}" min="0" max="5">
+            <input type="number" id="gauge${index}_decimals" value="${esc(gauge.decimals !== undefined ? gauge.decimals : 1)}" min="0" max="5">
           </div>
           <div class="field">
             <label>${this._t('ledsCount')}</label>
-            <input type="number" id="gauge${index}_leds_count" value="${gauge.leds_count || (index === 0 ? 80 : 100)}" min="10" max="200">
+            <input type="number" id="gauge${index}_leds_count" value="${esc(gauge.leds_count || (index === 0 ? 80 : 100))}" min="10" max="200">
           </div>
           <div class="field">
             <label>${this._t('ledSize')}</label>
-            <input type="number" id="gauge${index}_led_size" value="${gauge.led_size || (index === 0 ? 6 : 8)}" min="2" max="20">
+            <input type="number" id="gauge${index}_led_size" value="${esc(gauge.led_size || (index === 0 ? 6 : 8))}" min="2" max="20">
+          </div>
+        </div>
+
+        <div class="sub-section">
+          <div class="sub-title">${this._t('arcGeometry')}</div>
+          <div class="help-text">${this._t('arcGeometryHelp')}</div>
+          <div class="row">
+            <div class="field">
+              <label>${this._t('startAngle')}</label>
+              <input type="number" id="gauge${index}_start_angle" value="${esc(gauge.start_angle !== undefined ? gauge.start_angle : 0)}" min="-360" max="360" step="1">
+            </div>
+            <div class="field">
+              <label>${this._t('arcLength')}</label>
+              <input type="number" id="gauge${index}_arc_length" value="${esc(gauge.arc_length !== undefined ? gauge.arc_length : 360)}" min="10" max="360" step="1">
+            </div>
           </div>
         </div>
 
@@ -842,7 +893,7 @@ class DualGaugeCardEditor extends HTMLElement {
           </div>
           <div class="field">
             <label>${this._t('animationDuration')}</label>
-            <input type="number" id="gauge${index}_animation_duration" value="${gauge.animation_duration || 800}" min="0" max="5000" step="100">
+            <input type="number" id="gauge${index}_animation_duration" value="${esc(gauge.animation_duration || 800)}" min="0" max="5000" step="100">
           </div>
         </div>
 
@@ -875,22 +926,22 @@ class DualGaugeCardEditor extends HTMLElement {
         <div class="row" id="gauge${index}_center_shadow_options" style="display: ${gauge.center_shadow ? 'flex' : 'none'};">
           <div class="field">
             <label>${this._t('centerShadowBlur')}</label>
-            <input type="number" id="gauge${index}_center_shadow_blur" value="${gauge.center_shadow_blur || 30}" min="0" max="100">
+            <input type="number" id="gauge${index}_center_shadow_blur" value="${esc(gauge.center_shadow_blur || 30)}" min="0" max="100">
           </div>
           <div class="field">
             <label>${this._t('centerShadowSpread')}</label>
-            <input type="number" id="gauge${index}_center_shadow_spread" value="${gauge.center_shadow_spread || 15}" min="0" max="100">
+            <input type="number" id="gauge${index}_center_shadow_spread" value="${esc(gauge.center_shadow_spread || 15)}" min="0" max="100">
           </div>
         </div>
 
         <div class="row" id="gauge${index}_outer_shadow_options" style="display: ${gauge.outer_shadow ? 'flex' : 'none'};">
           <div class="field">
             <label>${this._t('outerShadowBlur')}</label>
-            <input type="number" id="gauge${index}_outer_shadow_blur" value="${gauge.outer_shadow_blur || 30}" min="0" max="100">
+            <input type="number" id="gauge${index}_outer_shadow_blur" value="${esc(gauge.outer_shadow_blur || 30)}" min="0" max="100">
           </div>
           <div class="field">
             <label>${this._t('outerShadowSpread')}</label>
-            <input type="number" id="gauge${index}_outer_shadow_spread" value="${gauge.outer_shadow_spread || 15}" min="0" max="100">
+            <input type="number" id="gauge${index}_outer_shadow_spread" value="${esc(gauge.outer_shadow_spread || 15)}" min="0" max="100">
           </div>
         </div>
 
@@ -900,9 +951,9 @@ class DualGaugeCardEditor extends HTMLElement {
           <div class="severity-list" id="gauge${index}_severity_list">
             ${severity.map((s, i) => `
               <div class="severity-item" data-index="${i}">
-                <input type="color" value="${s.color}" data-field="color">
-                <input type="text" value="${s.color}" placeholder="#4caf50" data-field="color_text" style="width: 80px;">
-                <input type="number" value="${s.value}" placeholder="Value" data-field="value" min="0">
+                <input type="color" value="${esc(s.color)}" data-field="color">
+                <input type="text" value="${esc(s.color)}" placeholder="#4caf50" data-field="color_text" style="width: 80px;">
+                <input type="number" value="${esc(s.value)}" placeholder="Value" data-field="value" min="0">
                 <button class="remove-btn" data-action="remove-severity" data-gauge="${index}" data-item="${i}">×</button>
               </div>
             `).join('')}
@@ -915,7 +966,7 @@ class DualGaugeCardEditor extends HTMLElement {
           <div class="row">
             <div class="field">
               <label>${this._t('markersRadius')}</label>
-              <input type="number" id="gauge${index}_markers_radius" value="${gauge.markers_radius !== undefined ? gauge.markers_radius : ''}" placeholder="Auto" min="10" max="300" step="1">
+              <input type="number" id="gauge${index}_markers_radius" value="${esc(gauge.markers_radius !== undefined ? gauge.markers_radius : '')}" placeholder="Auto" min="10" max="300" step="1">
             </div>
             <div class="field checkbox">
               <input type="checkbox" id="gauge${index}_markers_inside" ${gauge.markers_inside !== false ? 'checked' : ''}>
@@ -925,9 +976,9 @@ class DualGaugeCardEditor extends HTMLElement {
           <div class="markers-list" id="gauge${index}_markers_list">
             ${markers.map((m, i) => `
               <div class="marker-item" data-index="${i}">
-                <input type="number" value="${m.value}" placeholder="Value" data-field="value" step="any">
-                <input type="color" value="${m.color || '#ffffff'}" data-field="color">
-                <input type="text" value="${m.label || ''}" placeholder="Label" data-field="label">
+                <input type="number" value="${esc(m.value)}" placeholder="Value" data-field="value" step="any">
+                <input type="color" value="${esc(m.color || '#ffffff')}" data-field="color">
+                <input type="text" value="${esc(m.label || '')}" placeholder="Label" data-field="label">
                 <button class="remove-btn" data-action="remove-marker" data-gauge="${index}" data-item="${i}">×</button>
               </div>
             `).join('')}
@@ -940,10 +991,10 @@ class DualGaugeCardEditor extends HTMLElement {
           <div class="zones-list" id="gauge${index}_zones_list">
             ${zones.map((z, i) => `
               <div class="zone-item" data-index="${i}">
-                <input type="number" value="${z.from}" placeholder="From" data-field="from" step="any">
-                <input type="number" value="${z.to}" placeholder="To" data-field="to" step="any">
-                <input type="color" value="${z.color || '#2196f3'}" data-field="color">
-                <input type="number" value="${z.opacity !== undefined ? z.opacity : 0.3}" placeholder="Opacity" data-field="opacity" min="0" max="1" step="0.1">
+                <input type="number" value="${esc(z.from)}" placeholder="From" data-field="from" step="any">
+                <input type="number" value="${esc(z.to)}" placeholder="To" data-field="to" step="any">
+                <input type="color" value="${esc(z.color || '#2196f3')}" data-field="color">
+                <input type="number" value="${esc(z.opacity !== undefined ? z.opacity : 0.3)}" placeholder="Opacity" data-field="opacity" min="0" max="1" step="0.1">
                 <button class="remove-btn" data-action="remove-zone" data-gauge="${index}" data-item="${i}">×</button>
               </div>
             `).join('')}
@@ -957,11 +1008,11 @@ class DualGaugeCardEditor extends HTMLElement {
           <div class="row">
             <div class="field">
               <label>${this._t('valueFont')}</label>
-              <input type="text" id="gauge${index}_value_font_family" value="${gauge.value_font_family || ''}" placeholder="inherit">
+              <input type="text" id="gauge${index}_value_font_family" value="${esc(gauge.value_font_family || '')}" placeholder="inherit">
             </div>
             <div class="field">
               <label>${this._t('valueSize')}</label>
-              <input type="text" id="gauge${index}_value_font_size" value="${gauge.value_font_size || ''}" placeholder="${index === 0 ? '24px' : '18px'}">
+              <input type="text" id="gauge${index}_value_font_size" value="${esc(gauge.value_font_size || '')}" placeholder="${index === 0 ? '24px' : '18px'}">
             </div>
             <div class="field">
               <label>${this._t('valueWeight')}</label>
@@ -987,17 +1038,17 @@ class DualGaugeCardEditor extends HTMLElement {
             <div class="field">
               <label>${this._t('valueColor')}</label>
               <div class="color-row">
-                <input type="color" id="gauge${index}_value_font_color" value="${gauge.value_font_color || '#ffffff'}" data-field="color">
-                <input type="text" id="gauge${index}_value_font_color_text" value="${gauge.value_font_color || ''}" placeholder="Auto" data-field="color_text">
+                <input type="color" id="gauge${index}_value_font_color" value="${esc(gauge.value_font_color || '#ffffff')}" data-field="color">
+                <input type="text" id="gauge${index}_value_font_color_text" value="${esc(gauge.value_font_color || '')}" placeholder="Auto" data-field="color_text">
               </div>
             </div>
             <div class="field">
               <label>${this._t('unitFont')}</label>
-              <input type="text" id="gauge${index}_unit_font_family" value="${gauge.unit_font_family || ''}" placeholder="inherit">
+              <input type="text" id="gauge${index}_unit_font_family" value="${esc(gauge.unit_font_family || '')}" placeholder="inherit">
             </div>
             <div class="field">
               <label>${this._t('unitSize')}</label>
-              <input type="text" id="gauge${index}_unit_font_size" value="${gauge.unit_font_size || ''}" placeholder="${index === 0 ? '14px' : '12px'}">
+              <input type="text" id="gauge${index}_unit_font_size" value="${esc(gauge.unit_font_size || '')}" placeholder="${index === 0 ? '14px' : '12px'}">
             </div>
           </div>
 
@@ -1023,8 +1074,8 @@ class DualGaugeCardEditor extends HTMLElement {
             <div class="field">
               <label>${this._t('unitColor')}</label>
               <div class="color-row">
-                <input type="color" id="gauge${index}_unit_font_color" value="${gauge.unit_font_color || '#dddddd'}" data-field="color">
-                <input type="text" id="gauge${index}_unit_font_color_text" value="${gauge.unit_font_color || ''}" placeholder="Auto" data-field="color_text">
+                <input type="color" id="gauge${index}_unit_font_color" value="${esc(gauge.unit_font_color || '#dddddd')}" data-field="color">
+                <input type="text" id="gauge${index}_unit_font_color_text" value="${esc(gauge.unit_font_color || '')}" placeholder="Auto" data-field="color_text">
               </div>
             </div>
           </div>
@@ -1235,6 +1286,8 @@ class DualGaugeCardEditor extends HTMLElement {
       this._config.gauges[i].decimals = getInputValue(`gauge${i}_decimals`) ?? this._config.gauges[i].decimals ?? 1;
       this._config.gauges[i].leds_count = getInputValue(`gauge${i}_leds_count`) ?? this._config.gauges[i].leds_count ?? (i === 0 ? 80 : 100);
       this._config.gauges[i].led_size = getInputValue(`gauge${i}_led_size`) ?? this._config.gauges[i].led_size ?? (i === 0 ? 6 : 8);
+      this._config.gauges[i].start_angle = getInputValue(`gauge${i}_start_angle`) ?? this._config.gauges[i].start_angle ?? 0;
+      this._config.gauges[i].arc_length = getInputValue(`gauge${i}_arc_length`) ?? this._config.gauges[i].arc_length ?? 360;
       this._config.gauges[i].markers_radius = getInputValue(`gauge${i}_markers_radius`) ?? this._config.gauges[i].markers_radius ?? undefined;
       this._config.gauges[i].markers_inside = getInputValue(`gauge${i}_markers_inside`) ?? this._config.gauges[i].markers_inside ?? true;
       this._config.gauges[i].theme = getInputValue(`gauge${i}_theme`) ?? this._config.gauges[i].theme ?? 'default';
@@ -1296,7 +1349,10 @@ class DualGaugeCardEditor extends HTMLElement {
       return el.value;
     };
 
+    // Spread the previous config first so keys the editor does not manage (view_layout,
+    // grid_options, visibility, ...) survive a round-trip through the visual editor.
     const newConfig = {
+      ...this._config,
       type: 'custom:dual-gauge-card',
       name: getValue('name') || '',
       gauge_size: getValue('gauge_size') || 200,
@@ -1312,42 +1368,33 @@ class DualGaugeCardEditor extends HTMLElement {
       gauges: [0, 1].map(idx => this._getGaugeConfig(idx))
     };
 
-    // Add optional parameters only if defined
-    const customBg = getValue('custom_background_text');
-    if (customBg) newConfig.custom_background = customBg;
-    
-    const customGaugeBg = getValue('custom_gauge_background_text');
-    if (customGaugeBg) newConfig.custom_gauge_background = customGaugeBg;
-    
-    const customCenterBg = getValue('custom_center_background_text');
-    if (customCenterBg) newConfig.custom_center_background = customCenterBg;
-    
-    const customTextColor = getValue('custom_text_color_text');
-    if (customTextColor) newConfig.custom_text_color = customTextColor;
-    
-    const customSecondaryText = getValue('custom_secondary_text_color_text');
-    if (customSecondaryText) newConfig.custom_secondary_text_color = customSecondaryText;
+    // Optional parameters: keep them out of the YAML when the field is empty, and drop any
+    // previous value so clearing a field in the editor really clears it
+    const setOptional = (key, value) => {
+      if (value) {
+        newConfig[key] = value;
+      } else {
+        delete newConfig[key];
+      }
+    };
+
+    setOptional('custom_background', getValue('custom_background_text'));
+    setOptional('custom_gauge_background', getValue('custom_gauge_background_text'));
+    setOptional('custom_center_background', getValue('custom_center_background_text'));
+    setOptional('custom_text_color', getValue('custom_text_color_text'));
+    setOptional('custom_secondary_text_color', getValue('custom_secondary_text_color_text'));
 
     // Title typography
-    const titleFontSize = getValue('title_font_size');
-    if (titleFontSize) newConfig.title_font_size = titleFontSize;
-    
-    const titleFontFamily = getValue('title_font_family');
-    if (titleFontFamily) newConfig.title_font_family = titleFontFamily;
-    
-    const titleFontWeight = getValue('title_font_weight');
-    if (titleFontWeight) newConfig.title_font_weight = titleFontWeight;
-    
-    const titleFontColor = getValue('title_font_color_text');
-    if (titleFontColor) newConfig.title_font_color = titleFontColor;
-    
-    const cardBackground = getValue('card_background');
-    if (cardBackground) newConfig.card_background = cardBackground;
+    setOptional('title_font_size', getValue('title_font_size'));
+    setOptional('title_font_family', getValue('title_font_family'));
+    setOptional('title_font_weight', getValue('title_font_weight'));
+    setOptional('title_font_color', getValue('title_font_color_text'));
+    setOptional('card_background', getValue('card_background'));
 
     // Transparency
-    if (getValue('transparent_card_background')) newConfig.transparent_card_background = true;
-    if (getValue('transparent_gauge_background')) newConfig.transparent_gauge_background = true;
-    if (getValue('transparent_center_background')) newConfig.transparent_center_background = true;
+    setOptional('transparent_card_background', getValue('transparent_card_background'));
+    setOptional('transparent_gauge_background', getValue('transparent_gauge_background'));
+    setOptional('transparent_center_background', getValue('transparent_center_background'));
 
     this._config = newConfig;
     this._fireConfigChanged();
@@ -1365,7 +1412,9 @@ class DualGaugeCardEditor extends HTMLElement {
       return el.value;
     };
 
+    // Keep per-gauge keys the editor does not manage (custom theme colors, tap actions, ...)
     const config = {
+      ...(this._config?.gauges?.[index] || {}),
       entity: getValue(`gauge${index}_entity`) || '',
       min: getValue(`gauge${index}_min`) !== undefined ? getValue(`gauge${index}_min`) : 0,
       max: getValue(`gauge${index}_max`) !== undefined ? getValue(`gauge${index}_max`) : 100,
@@ -1373,6 +1422,8 @@ class DualGaugeCardEditor extends HTMLElement {
       decimals: getValue(`gauge${index}_decimals`) !== undefined ? getValue(`gauge${index}_decimals`) : 1,
       leds_count: getValue(`gauge${index}_leds_count`) !== undefined ? getValue(`gauge${index}_leds_count`) : (index === 0 ? 80 : 100),
       led_size: getValue(`gauge${index}_led_size`) !== undefined ? getValue(`gauge${index}_led_size`) : (index === 0 ? 6 : 8),
+      start_angle: getValue(`gauge${index}_start_angle`) !== undefined ? getValue(`gauge${index}_start_angle`) : 0,
+      arc_length: getValue(`gauge${index}_arc_length`) !== undefined ? getValue(`gauge${index}_arc_length`) : 360,
       markers_radius: getValue(`gauge${index}_markers_radius`) !== undefined ? getValue(`gauge${index}_markers_radius`) : undefined,
       markers_inside: getValue(`gauge${index}_markers_inside`) !== false,
       theme: getValue(`gauge${index}_theme`) || 'default',
@@ -1387,6 +1438,11 @@ class DualGaugeCardEditor extends HTMLElement {
       outer_shadow_blur: getValue(`gauge${index}_outer_shadow_blur`) || 30,
       outer_shadow_spread: getValue(`gauge${index}_outer_shadow_spread`) || 15
     };
+
+    // markers_radius is optional: an empty field means "auto"
+    if (config.markers_radius === undefined) {
+      delete config.markers_radius;
+    }
 
     // Get severity thresholds
     const severityList = this.shadowRoot.getElementById(`gauge${index}_severity_list`);
@@ -1451,9 +1507,11 @@ class DualGaugeCardEditor extends HTMLElement {
   }
 
   _fireConfigChanged() {
-    const event = new Event('config-changed', { bubbles: true, composed: true });
-    event.detail = { config: this._config };
-    this.dispatchEvent(event);
+    this.dispatchEvent(new CustomEvent('config-changed', {
+      detail: { config: this._config },
+      bubbles: true,
+      composed: true
+    }));
   }
 }
 

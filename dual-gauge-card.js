@@ -1,6 +1,6 @@
 /**
  * Dual Gauge Card - Standalone Version (Non-compiled)
- * Version: 1.2.0
+ * Version: 1.4.0
  * 
  * Ce fichier est le point d'entrée principal qui charge :
  * - Le core de la carte (inline ci-dessous)
@@ -11,7 +11,7 @@
 // CONFIGURATION AND THEMES
 // ============================================================================
 
-const CARD_VERSION = '1.3.0';
+const CARD_VERSION = '1.4.0';
 
 const themes = {
   default: {
@@ -113,6 +113,56 @@ function optimizeLEDs(configuredCount) {
   return configuredCount || 100;
 }
 
+const DEFAULT_START_ANGLE = 0;
+const DEFAULT_ARC_LENGTH = 360;
+
+/**
+ * Read the arc geometry of a gauge (start offset and arc length, in degrees)
+ * @param {Object} gaugeConfig - Configuration of a single gauge
+ * @returns {{startAngle: number, arcLength: number}} Geometry, 0° = top (12 o'clock), clockwise
+ */
+function getArcGeometry(gaugeConfig) {
+  const startAngle = Number(gaugeConfig?.start_angle);
+  const arcLength = Number(gaugeConfig?.arc_length);
+
+  return {
+    startAngle: Number.isFinite(startAngle) ? startAngle : DEFAULT_START_ANGLE,
+    arcLength: Number.isFinite(arcLength) && arcLength > 0
+      ? Math.min(arcLength, 360)
+      : DEFAULT_ARC_LENGTH
+  };
+}
+
+/**
+ * Reference point used by the bidirectional mode (adaptive zero)
+ * @param {number} min - Minimum value
+ * @param {number} max - Maximum value
+ * @returns {number} Zero when the range crosses it, the midpoint otherwise
+ */
+function getReferencePoint(min, max) {
+  return (min <= 0 && max >= 0) ? 0 : (min + max) / 2;
+}
+
+/**
+ * Position of the bidirectional reference point inside the arc, as a 0-1 fraction
+ *
+ * On a full circle the reference stays at the start of the arc and the lower side wraps
+ * around the seam (historical behaviour). On a partial arc there is nothing to wrap into,
+ * so the reference sits proportionally inside the arc and both sides stay visible.
+ * @param {number} min - Minimum value
+ * @param {number} max - Maximum value
+ * @param {number} arcLength - Arc length in degrees
+ * @returns {number} Fraction of the arc between its start and the reference point
+ */
+function getBidirectionalOrigin(min, max, arcLength) {
+  if (arcLength >= 360) return 0;
+
+  const totalRange = max - min;
+  if (totalRange <= 0) return 0;
+
+  return (getReferencePoint(min, max) - min) / totalRange;
+}
+
 /**
  * Calculate bidirectional LED activation
  * @param {number} value - Current value
@@ -120,9 +170,10 @@ function optimizeLEDs(configuredCount) {
  * @param {number} max - Maximum value
  * @param {number} ledsCount - Total number of LEDs
  * @param {boolean} bidirectional - Enable bidirectional mode
- * @returns {Object} Object with activeLeds count and direction ('positive', 'negative', or 'unidirectional')
+ * @param {number} arcLength - Arc length in degrees (360 = full circle)
+ * @returns {Object} Object with activeLeds count, originIndex and direction ('positive', 'negative', or 'unidirectional')
  */
-function calculateBidirectionalLeds(value, min, max, ledsCount, bidirectional) {
+function calculateBidirectionalLeds(value, min, max, ledsCount, bidirectional, arcLength = DEFAULT_ARC_LENGTH) {
   // Calculate full-range normalized value for severity colors (always needed)
   const fullRangeNormalized = ((value - min) / (max - min)) * 100;
 
@@ -131,17 +182,20 @@ function calculateBidirectionalLeds(value, min, max, ledsCount, bidirectional) {
     const activeLeds = Math.round((fullRangeNormalized / 100) * ledsCount);
     return {
       activeLeds,
+      originIndex: 0,
       direction: 'unidirectional',
       normalizedValue: fullRangeNormalized
     };
   }
 
-  // Bidirectional mode: reference point is at the top (LED index 0)
+  // Bidirectional mode: reference point is at the origin LED (start of the arc on a full
+  // circle, proportionally inside the arc otherwise)
   // Values above reference go clockwise (to the right)
   // Values below reference go counter-clockwise (to the left)
 
   // Determine reference point (adaptive zero)
-  const referencePoint = (min <= 0 && max >= 0) ? 0 : (min + max) / 2;
+  const referencePoint = getReferencePoint(min, max);
+  const originIndex = Math.round(getBidirectionalOrigin(min, max, arcLength) * ledsCount);
 
   // Calculate range sizes on each side of reference
   const totalRange = max - min;
@@ -161,6 +215,7 @@ function calculateBidirectionalLeds(value, min, max, ledsCount, bidirectional) {
 
     return {
       activeLeds,
+      originIndex,
       direction: 'positive',
       normalizedValue: fullRangeNormalized  // Use full-range for severity colors
     };
@@ -173,6 +228,7 @@ function calculateBidirectionalLeds(value, min, max, ledsCount, bidirectional) {
 
     return {
       activeLeds,
+      originIndex,
       direction: 'negative',
       normalizedValue: fullRangeNormalized  // Use full-range for severity colors
     };
@@ -185,39 +241,44 @@ function calculateBidirectionalLeds(value, min, max, ledsCount, bidirectional) {
  * @param {number} min - Minimum range value
  * @param {number} max - Maximum range value
  * @param {boolean} bidirectional - Whether bidirectional mode is enabled
- * @returns {number} Angle in degrees (0-360)
+ * @param {number} startAngle - Offset of the start of the arc in degrees (0 = top)
+ * @param {number} arcLength - Arc length in degrees (360 = full circle)
+ * @returns {number} Angle in degrees, relative to the top and going clockwise
  */
-function valueToAngle(value, min, max, bidirectional) {
+function valueToAngle(value, min, max, bidirectional, startAngle = DEFAULT_START_ANGLE, arcLength = DEFAULT_ARC_LENGTH) {
   if (!bidirectional) {
-    // Unidirectional mode: simple linear mapping
+    // Unidirectional mode: simple linear mapping over the arc
     const percentage = ((value - min) / (max - min)) * 100;
-    return (percentage / 100) * 360;
+    return startAngle + (percentage / 100) * arcLength;
   }
 
   // Bidirectional mode: proportional allocation with adaptive reference point
 
   // Determine reference point (adaptive zero)
-  const referencePoint = (min <= 0 && max >= 0) ? 0 : (min + max) / 2;
+  const referencePoint = getReferencePoint(min, max);
 
   // Calculate range sizes on each side of reference
   const totalRange = max - min;
   const lowerRange = referencePoint - min;  // Size from min to reference
   const upperRange = max - referencePoint;  // Size from reference to max
 
-  // Calculate proportional angle allocation (total 360°)
+  // Calculate proportional angle allocation over the arc
   const lowerProportion = lowerRange / totalRange;
   const upperProportion = upperRange / totalRange;
-  const maxLowerAngle = lowerProportion * 360;  // Degrees allocated to lower side
-  const maxUpperAngle = upperProportion * 360;  // Degrees allocated to upper side
+  const maxLowerAngle = lowerProportion * arcLength;  // Degrees allocated to lower side
+  const maxUpperAngle = upperProportion * arcLength;  // Degrees allocated to upper side
+
+  // Angle of the reference point itself
+  const originAngle = startAngle + getBidirectionalOrigin(min, max, arcLength) * arcLength;
 
   if (value >= referencePoint) {
-    // Upper values: go clockwise from top (0° to maxUpperAngle)
+    // Upper values: go clockwise from the reference point
     const percentage = upperRange > 0 ? ((value - referencePoint) / upperRange) * 100 : 0;
-    return (percentage / 100) * maxUpperAngle;
+    return originAngle + (percentage / 100) * maxUpperAngle;
   } else {
-    // Lower values: go counter-clockwise from top (360° to 360° - maxLowerAngle)
+    // Lower values: go counter-clockwise from the reference point
     const percentage = lowerRange > 0 ? ((referencePoint - value) / lowerRange) * 100 : 0;
-    return 360 - ((percentage / 100) * maxLowerAngle);
+    return originAngle - ((percentage / 100) * maxLowerAngle);
   }
 }
 
@@ -451,10 +512,16 @@ const stylesCSS = `
 // RENDERER
 // ============================================================================
 
-function generateLedsHTML(ledsCount, radius, ledSize, prefix = '') {
+function generateLedsHTML(ledsCount, radius, ledSize, prefix = '', startAngle = DEFAULT_START_ANGLE, arcLength = DEFAULT_ARC_LENGTH) {
+  // On a full circle the last LED must not land on the first one, so the step divides the
+  // arc by the LED count. On a partial arc both ends are visible and must carry a LED.
+  const step = arcLength >= 360
+    ? arcLength / ledsCount
+    : arcLength / Math.max(ledsCount - 1, 1);
+
   const leds = [];
   for (let i = 0; i < ledsCount; i++) {
-    const angle = (i / ledsCount) * 360 - 90;
+    const angle = startAngle + i * step - 90;
     const translate = radius - ledSize;
     leds.push(`<div class="led" id="led-${prefix}${prefix ? '-' : ''}${i}" style="transform: rotate(${angle}deg) translate(${translate}px);"></div>`);
   }
@@ -481,6 +548,9 @@ function renderDual(context) {
     : (innerGaugeSize / 2);
   const ledSize1 = config1.led_size || 6;
   const ledSize2 = config2.led_size || 8;
+
+  const arc1 = getArcGeometry(config1);
+  const arc2 = getArcGeometry(config2);
 
   // Déterminer le thème global de la carte (utilise le thème de la première gauge par défaut)
   const globalTheme = context.config.card_theme ? getTheme(context.config.card_theme, context.config) : theme1;
@@ -596,8 +666,8 @@ function renderDual(context) {
         <div class="outer-shadow" id="outer-shadow-outer"></div>
         <div class="center-shadow" id="center-shadow-inner"></div>
         <div class="center-shadow" id="center-shadow-outer"></div>
-        ${generateLedsHTML(ledsCount2, outerGaugeSize / 2, ledSize2, 'outer')}
-        ${generateLedsHTML(ledsCount1, innerGaugeRadius, ledSize1, 'inner')}
+        ${generateLedsHTML(ledsCount2, outerGaugeSize / 2, ledSize2, 'outer', arc2.startAngle, arc2.arcLength)}
+        ${generateLedsHTML(ledsCount1, innerGaugeRadius, ledSize1, 'inner', arc1.startAngle, arc1.arcLength)}
         <div class="center dual-center" style="background: ${globalTheme.centerBackground}">
           <div class="value-group" id="group-inner">
             <div class="value" id="value-inner">0</div>
@@ -637,6 +707,9 @@ function addMarkersAndZones(context) {
   const config1 = context.config.gauges[0];
   const config2 = context.config.gauges[1];
 
+  const arc1 = getArcGeometry(config1);
+  const arc2 = getArcGeometry(config2);
+
   // Ajouter markers pour la gauge interne (gauge 0)
   if (config1.markers) {
     const min1 = config1.min || 0;
@@ -648,7 +721,7 @@ function addMarkersAndZones(context) {
     const markersInside1 = config1.markers_inside !== false;
 
     config1.markers.forEach(marker => {
-      const angle = valueToAngle(marker.value, min1, max1, config1.bidirectional || false);
+      const angle = valueToAngle(marker.value, min1, max1, config1.bidirectional || false, arc1.startAngle, arc1.arcLength);
 
       // Calcul cartésien pour positionnement précis
       const angleRad = (angle - 90) * Math.PI / 180;
@@ -707,7 +780,7 @@ function addMarkersAndZones(context) {
     const markersInside2 = config2.markers_inside !== false;
 
     config2.markers.forEach(marker => {
-      const angle = valueToAngle(marker.value, min2, max2, config2.bidirectional || false);
+      const angle = valueToAngle(marker.value, min2, max2, config2.bidirectional || false, arc2.startAngle, arc2.arcLength);
 
       // Calcul cartésien pour positionnement précis
       const angleRad = (angle - 90) * Math.PI / 180;
@@ -762,8 +835,8 @@ function addMarkersAndZones(context) {
     const svgSize = (innerGaugeRadius + 10) * 2;
 
     config1.zones.forEach(zone => {
-      const startAngle = valueToAngle(zone.from, min1, max1, config1.bidirectional || false);
-      const endAngle = valueToAngle(zone.to, min1, max1, config1.bidirectional || false);
+      const startAngle = valueToAngle(zone.from, min1, max1, config1.bidirectional || false, arc1.startAngle, arc1.arcLength);
+      const endAngle = valueToAngle(zone.to, min1, max1, config1.bidirectional || false, arc1.startAngle, arc1.arcLength);
 
       // Calculate arc angle (handle wrapping around 0°/360°)
       let arcAngle = endAngle - startAngle;
@@ -812,8 +885,8 @@ function addMarkersAndZones(context) {
     const max2 = config2.max || 100;
 
     config2.zones.forEach(zone => {
-      const startAngle = valueToAngle(zone.from, min2, max2, config2.bidirectional || false);
-      const endAngle = valueToAngle(zone.to, min2, max2, config2.bidirectional || false);
+      const startAngle = valueToAngle(zone.from, min2, max2, config2.bidirectional || false, arc2.startAngle, arc2.arcLength);
+      const endAngle = valueToAngle(zone.to, min2, max2, config2.bidirectional || false, arc2.startAngle, arc2.arcLength);
 
       // Calculate arc angle (handle wrapping around 0°/360°)
       let arcAngle = endAngle - startAngle;
@@ -867,7 +940,8 @@ function updateLedsDual(context, value, ledsCount, prefix, gaugeConfig) {
   // Convert normalized value (0-100%) back to real value for bidirectional calculation
   const realValue = min + (value / 100) * (max - min);
   const bidirectional = gaugeConfig.bidirectional || false;
-  const ledInfo = calculateBidirectionalLeds(realValue, min, max, ledsCount, bidirectional);
+  const { arcLength } = getArcGeometry(gaugeConfig);
+  const ledInfo = calculateBidirectionalLeds(realValue, min, max, ledsCount, bidirectional, arcLength);
 
   const color = getLedColor(ledInfo.normalizedValue, gaugeConfig.severity, min, max);
 
@@ -886,15 +960,17 @@ function updateLedsDual(context, value, ledsCount, prefix, gaugeConfig) {
     let isActive = false;
 
     if (ledInfo.direction === 'unidirectional') {
-      // Standard unidirectional mode: activate from LED 0 onwards
+      // Standard unidirectional mode: activate from the first LED of the arc onwards
       isActive = i < ledInfo.activeLeds;
     } else if (ledInfo.direction === 'positive') {
-      // Bidirectional positive: activate clockwise from LED 0
-      isActive = i < ledInfo.activeLeds;
+      // Bidirectional positive: activate clockwise from the reference LED
+      isActive = i >= ledInfo.originIndex && i < ledInfo.originIndex + ledInfo.activeLeds;
     } else if (ledInfo.direction === 'negative') {
-      // Bidirectional negative: activate counter-clockwise from LED 0
-      // LED 0 is the zero point (12h) and must be included, then LEDs go backwards (99, 98, 97...)
-      isActive = (i === 0) || (i > (ledsCount - ledInfo.activeLeds));
+      // Bidirectional negative: activate counter-clockwise from the reference LED, which is
+      // always lit. On a full circle the reference is LED 0 and the lower side wraps around
+      // the end of the ring (99, 98, 97...).
+      const distanceFromOrigin = (ledInfo.originIndex - i + ledsCount) % ledsCount;
+      isActive = distanceFromOrigin < Math.max(ledInfo.activeLeds, 1);
     }
 
     if (isActive) {
@@ -1070,24 +1146,30 @@ function parseDualConfig(config) {
     debounce_updates: config.debounce_updates || false,
     hide_shadows: config.hide_shadows || false,
 
-    gauges: config.gauges.map(gaugeConfig => ({
-      ...gaugeConfig,
-      min: gaugeConfig.min !== undefined ? gaugeConfig.min : 0,
-      max: gaugeConfig.max !== undefined ? gaugeConfig.max : 100,
-      leds_count: gaugeConfig.leds_count || 100,
-      led_size: gaugeConfig.led_size || 8,
-      decimals: gaugeConfig.decimals !== undefined ? gaugeConfig.decimals : 1,
-      smooth_transitions: gaugeConfig.smooth_transitions !== false,
-      animation_duration: gaugeConfig.animation_duration || 800,
-      severity: gaugeConfig.severity || [
-        { color: '#4caf50', value: 0 },
-        { color: '#ff9800', value: 50 },
-        { color: '#f44336', value: 75 }
-      ],
-      theme: gaugeConfig.theme || 'default',
-      hide_inactive_leds: gaugeConfig.hide_inactive_leds || false,
-      bidirectional: gaugeConfig.bidirectional || false
-    }))
+    gauges: config.gauges.map(gaugeConfig => {
+      const arc = getArcGeometry(gaugeConfig);
+
+      return {
+        ...gaugeConfig,
+        min: gaugeConfig.min !== undefined ? gaugeConfig.min : 0,
+        max: gaugeConfig.max !== undefined ? gaugeConfig.max : 100,
+        leds_count: gaugeConfig.leds_count || 100,
+        led_size: gaugeConfig.led_size || 8,
+        decimals: gaugeConfig.decimals !== undefined ? gaugeConfig.decimals : 1,
+        smooth_transitions: gaugeConfig.smooth_transitions !== false,
+        animation_duration: gaugeConfig.animation_duration || 800,
+        severity: gaugeConfig.severity || [
+          { color: '#4caf50', value: 0 },
+          { color: '#ff9800', value: 50 },
+          { color: '#f44336', value: 75 }
+        ],
+        theme: gaugeConfig.theme || 'default',
+        hide_inactive_leds: gaugeConfig.hide_inactive_leds || false,
+        bidirectional: gaugeConfig.bidirectional || false,
+        start_angle: arc.startAngle,
+        arc_length: arc.arcLength
+      };
+    })
   };
 
   return parsedConfig;
@@ -1108,10 +1190,12 @@ class DualGaugeCard extends HTMLElement {
     this.animationInterval1 = null;
     this.animationInterval2 = null;
 
-    this.attachShadow({ mode: "open" });
+    // Home Assistant calls setConfig() again whenever the configuration changes (live
+    // preview in the editor), and attachShadow() throws on an element that already has one.
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: "open" });
+    }
     renderDual(this);
-
-    this._updateDualGauge = () => updateDualGauge(this);
 
     this._updateDualGauge = () => updateDualGauge(this);
 
@@ -1131,13 +1215,16 @@ class DualGaugeCard extends HTMLElement {
       });
     }
 
-    if (this.config.power_save_mode) {
+    // setConfig() can run several times on the same element, only observe once
+    if (this.config.power_save_mode && !this._visibilityObserver) {
       this._setupVisibilityObserver();
     }
   }
 
   set hass(hass) {
     this._hass = hass;
+
+    if (!this.config) return;
 
     if (this.config.power_save_mode && !this.isVisible) return;
 
@@ -1155,7 +1242,7 @@ class DualGaugeCard extends HTMLElement {
   }
 
   _setupVisibilityObserver() {
-    const observer = new IntersectionObserver(
+    this._visibilityObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           this.isVisible = entry.isIntersecting;
@@ -1167,15 +1254,17 @@ class DualGaugeCard extends HTMLElement {
       { threshold: 0.1 }
     );
 
-    observer.observe(this);
+    this._visibilityObserver.observe(this);
   }
 
   _showEntityHistory(entityId) {
     if (!entityId || !this._hass) return;
 
-    const event = new Event("hass-more-info", { bubbles: true, composed: true });
-    event.detail = { entityId };
-    this.dispatchEvent(event);
+    this.dispatchEvent(new CustomEvent("hass-more-info", {
+      detail: { entityId },
+      bubbles: true,
+      composed: true
+    }));
   }
 
   getCardSize() {
