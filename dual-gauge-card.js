@@ -1,6 +1,6 @@
 /**
  * Dual Gauge Card - Standalone Version (Non-compiled)
- * Version: 1.4.0
+ * Version: 1.5.0
  * 
  * Ce fichier est le point d'entrée principal qui charge :
  * - Le core de la carte (inline ci-dessous)
@@ -11,7 +11,7 @@
 // CONFIGURATION AND THEMES
 // ============================================================================
 
-const CARD_VERSION = '1.4.0';
+const CARD_VERSION = '1.5.0';
 
 const themes = {
   default: {
