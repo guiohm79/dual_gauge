@@ -30,7 +30,7 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 
 <p align="center">
   <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple3.png" width="350" alt="Exemple 3">
-  <img src="https://github.com/guiohm79/dual_gauge/blob/8fbeb73ef1dc2ddf3e2cdd153f3e97d19f49a983/captures/Exemple4.png" width="350" alt="Exemple 4">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/8fbeb73ef1dc2ddf3e2cdd153f3e97d19f49a983/captures/Exemple7.png" width="350" alt="Exemple 4">
 </p>
 
 <p align="center">
