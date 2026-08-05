@@ -24,18 +24,18 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 
 
 <p align="center">
-  <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple4.png" width="350" alt="Exemple 1">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/main/captures/Exemple4.png" width="350" alt="Exemple 1">
   <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple2.png" width="350" alt="Exemple 2">
 </p>
 
 <p align="center">
-  <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple3.png" width="350" alt="Exemple 3">
-  <img src="https://github.com/guiohm79/dual_gauge/blob/8fbeb73ef1dc2ddf3e2cdd153f3e97d19f49a983/captures/Exemple7.png" width="350" alt="Exemple 4">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/main/captures/Exemple3.png" width="350" alt="Exemple 3">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/main/captures/Exemple7.png" width="350" alt="Exemple 4">
 </p>
 
 <p align="center">
-  <img src="https://github.com/guiohm79/dual_gauge/blob/f65e543b4c0d699495eec711c0f07e40ddfc020d/captures/Exemple1.png" width="350" alt="Exemple 5">
-  <img src="https://github.com/guiohm79/dual_gauge/blob/0d5210e32166785ad6fbccaa8a29810b425673d1/captures/Exemple6.png" width="350" alt="Exemple 6">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/main/captures/Exemple1.png" width="350" alt="Exemple 5">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/main/captures/Exemple6.png" width="350" alt="Exemple 6">
 </p>
 
 
