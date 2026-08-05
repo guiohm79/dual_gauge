@@ -1,6 +1,6 @@
 /**
  * Dual Gauge Card Editor - Visual Configuration Editor
- * Version: 1.5.1
+ * Version: 1.5.2
  *
  * This file is dynamically loaded by dual-gauge-card.js
  * when the user opens the visual editor.
@@ -118,7 +118,7 @@ const TEXTS = {
   shadows: 'Shadows',
   valueUnitTypography: 'Value & unit typography',
   severity: 'Color thresholds (severity)',
-  severityHelp: 'Colors applied depending on the value. The first threshold corresponds to the lowest values.',
+  severityHelp: 'Each threshold gives the color used up to its value, and the highest one also colors everything above it. They are applied from the lowest value to the highest, whatever the order of this list.',
   markers: 'Markers',
   zones: 'Colored zones',
   addThreshold: 'Add threshold',
@@ -622,7 +622,13 @@ class DualGaugeCardEditor extends HTMLElement {
       TEXTS.severityHelp,
       TEXTS.emptySeverity,
       TEXTS.addThreshold,
-      () => this._addItem(index, 'severity', { color: '#4caf50', value: 0 })
+      // A new threshold takes the top of the range rather than 0: at 0 it would only cover
+      // the lowest values and would look like the chosen colour had no effect
+      () => {
+        const gauge = this._gauge(index);
+        const value = gauge.max !== undefined ? gauge.max : 100;
+        this._addItem(index, 'severity', { color: '#4caf50', value });
+      }
     );
     this._lists[`severity${index}`] = panel;
     return panel;

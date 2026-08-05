@@ -1,6 +1,6 @@
 /**
  * Dual Gauge Card - Standalone Version (Non-compiled)
- * Version: 1.5.1
+ * Version: 1.5.2
  * 
  * Ce fichier est le point d'entrée principal qui charge :
  * - Le core de la carte (inline ci-dessous)
@@ -11,7 +11,7 @@
 // CONFIGURATION AND THEMES
 // ============================================================================
 
-const CARD_VERSION = '1.5.1';
+const CARD_VERSION = '1.5.2';
 
 const themes = {
   default: {
@@ -81,7 +81,11 @@ function getLedColor(value, severity, min, max) {
     { color: "#f44336", value: 100 },
   ];
 
-  const severityConfig = severity || defaultSeverity;
+  // Chaque seuil donne la couleur utilisée jusqu'à sa valeur, donc le premier seuil dont la
+  // valeur est atteinte gagne. On trie sur une copie : sans cela, un seuil saisi dans le
+  // désordre (par exemple ajouté en fin de liste) ne s'applique jamais, car un seuil de
+  // valeur supérieure placé avant lui répond en premier.
+  const severityConfig = [...(severity || defaultSeverity)].sort((a, b) => a.value - b.value);
 
   // Si min et max sont fournis, convertir la valeur normalisée (0-100%) en valeur réelle
   if (min !== undefined && max !== undefined) {

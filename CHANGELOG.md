@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-08-05
+
+### Fixed
+- 🐛 **A severity color could be ignored and the gauge stayed on the previous color**: the
+  thresholds were read in the order of the list, so the first one whose value was reached
+  answered, and a threshold placed after one of a higher value never applied. Adding a
+  threshold from the editor produced exactly that, since a new threshold was created with
+  the value 0 at the end of the list: the color picked never showed up and the gauge kept
+  the color of the first threshold. Thresholds are now applied from the lowest value to the
+  highest whatever their order in the configuration, which also fixes the configurations
+  written by hand in YAML.
+- 🐛 A threshold added from the visual editor now takes the top of the gauge range instead of
+  the value 0, so the chosen color is visible right away
+
+### Changed
+- 📖 The severity help text in the editor and in the README now states that a threshold
+  gives the color used up to its value, and that the highest one colors everything above it
+
 ## [1.5.1] - 2026-08-05
 
 ### Fixed
