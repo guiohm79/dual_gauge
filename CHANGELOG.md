@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-08-05
+
+### Fixed
+- 🐛 **A color chosen in the color picker was lost and the swatch went back to its previous
+  color**: Home Assistant hands the editor a new `hass` object on every state change, several
+  times per second on a live dashboard, and the editor was pushing the whole configuration
+  back into its fields each time. The color picker of the browser is a modal that keeps its
+  input focused and reports the color under the cursor while it is open, so every state
+  update was overwriting the selection in progress. Typing the color in the text field was
+  unaffected, which is why only the picker was failing.
+  - State updates now only hand the fresh `hass` to the forms, they no longer rewrite the
+    values being edited — which also removes a lot of useless work on every state change
+  - The swatch is never realigned while the user is in it
+
 ## [1.5.2] - 2026-08-05
 
 ### Fixed
