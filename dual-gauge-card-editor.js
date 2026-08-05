@@ -1,161 +1,354 @@
 /**
  * Dual Gauge Card Editor - Visual Configuration Editor
- * Version: 1.4.0
- * 
+ * Version: 1.5.0
+ *
  * This file is dynamically loaded by dual-gauge-card.js
  * when the user opens the visual editor.
+ *
+ * The editor is built on the Home Assistant form stack (`ha-form`,
+ * `ha-expansion-panel`, `ha-textfield`, `ha-icon-button`), so it inherits the theme,
+ * the widgets and the behaviour of the built-in card editors instead of reimplementing
+ * a form with raw HTML inputs.
  */
 
 // ============================================================================
-// TRANSLATIONS
+// LABELS
 // ============================================================================
 
-const translations = {
-  en: {
-    // General
-    cardName: 'Card Name',
-    generalConfig: 'General Configuration',
-    innerGauge: 'Inner Gauge',
-    outerGauge: 'Outer Gauge',
-    
-    // Sizes
-    outerGaugeSize: 'Outer Gauge Size (px)',
-    innerGaugeSize: 'Inner Gauge Size (px)',
-    innerGaugeRadius: 'Inner Radius (px)',
-    
-    // Position and theme
-    titlePosition: 'Title Position',
-    cardTheme: 'Card Theme',
-    positionBottom: 'Bottom',
-    positionTop: 'Top',
-    positionInsideTop: 'Inside Top',
-    positionInsideBottom: 'Inside Bottom',
-    positionNone: 'None',
-    themeDefault: 'Default',
-    themeLight: 'Light',
-    themeDark: 'Dark',
-    themeCustom: 'Custom',
-    
-    // Options
-    hideCard: 'Hide card frame (transparent mode)',
-    powerSaveMode: 'Power save mode',
-    debounceUpdates: 'Limit update frequency',
-    hideShadows: 'Hide shadows',
-    updateInterval: 'Update interval (ms)',
-    
-    // Custom theme
-    customThemeColors: 'Custom Theme Colors',
-    cardBackground: 'Card Background',
-    gaugeBackground: 'Gauge Background',
-    centerBackground: 'Center Background',
-    primaryTextColor: 'Primary Text Color',
-    secondaryTextColor: 'Secondary Text Color',
-    
-    // Title typography
-    titleTypography: 'Title Typography',
-    fontSize: 'Font Size',
-    fontFamily: 'Font Family',
-    fontWeight: 'Font Weight',
-    titleColor: 'Title Color',
-    cardBackgroundCss: 'Card Background (CSS)',
-    
-    // Transparency
-    transparencyOptions: 'Transparency Options',
-    transparencyHelp: 'These options override colors with transparent, taking priority over theme settings.',
-    transparentCardBg: 'Transparent card background',
-    transparentGaugeBg: 'Transparent gauge background',
-    transparentCenterBg: 'Transparent center background',
-    
-    // Entity and values
-    entity: 'Entity *',
-    minValue: 'Minimum Value',
-    maxValue: 'Maximum Value',
-    unit: 'Unit',
-    decimals: 'Decimals',
-    ledsCount: 'LEDs Count',
-    ledSize: 'LED Size (px)',
-    theme: 'Theme',
-    animationDuration: 'Animation Duration (ms)',
+// Keys match the configuration keys, `ha-form` asks for them through computeLabel()
+const LABELS = {
+  // General
+  name: 'Card name',
+  gauge_size: 'Outer gauge size',
+  inner_gauge_size: 'Inner gauge size',
+  inner_gauge_radius: 'Inner radius',
+  title_position: 'Title position',
+  card_theme: 'Card theme',
+  update_interval: 'Update interval',
+  hide_card: 'Hide card frame',
+  power_save_mode: 'Power save mode',
+  debounce_updates: 'Limit update frequency',
+  hide_shadows: 'Hide shadows',
 
-    // Arc geometry
-    arcGeometry: 'Arc Geometry',
-    startAngle: 'Start Angle (°)',
-    arcLength: 'Arc Length (°)',
-    arcGeometryHelp: 'Start angle offsets the beginning of the gauge: 0° = top (12 o\'clock), positive values rotate clockwise. Arc length is the angular span of the gauge: 360° = full circle, 180° = half circle.',
+  // Title typography
+  title_font_size: 'Font size',
+  title_font_family: 'Font family',
+  title_font_weight: 'Font weight',
+  title_font_color: 'Title color',
+  card_background: 'Card background',
 
-    // Gauge options
-    bidirectionalMode: 'Bidirectional Mode',
-    hideInactiveLeds: 'Hide Inactive LEDs',
-    smoothTransitions: 'Smooth Transitions',
-    centerShadow: 'Center Shadow',
-    outerShadow: 'Outer Shadow',
-    centerShadowBlur: 'Center Shadow Blur',
-    centerShadowSpread: 'Center Shadow Spread',
-    outerShadowBlur: 'Outer Shadow Blur',
-    outerShadowSpread: 'Outer Shadow Spread',
-    
-    // Severity
-    severityThresholds: 'Color Thresholds (Severity)',
-    severityHelp: 'Define colors based on values. The first corresponds to the minimum value.',
-    addThreshold: '+ Add Threshold',
-    
-    // Markers
-    markers: 'Markers',
-    markersRadius: 'Markers Radius (px)',
-    markersInside: 'Labels Inside',
-    addMarker: '+ Add Marker',
-    
-    // Zones
-    coloredZones: 'Colored Zones',
-    addZone: '+ Add Zone',
-    from: 'From',
-    to: 'To',
-    opacity: 'Opacity',
-    
-    // Typography
-    valueUnitTypography: 'Value & Unit Typography',
-    valueFont: 'Value Font',
-    valueSize: 'Value Size',
-    valueWeight: 'Value Weight',
-    valueColor: 'Value Color',
-    unitFont: 'Unit Font',
-    unitSize: 'Unit Size',
-    unitWeight: 'Unit Weight',
-    unitColor: 'Unit Color',
-    
-    // Weight values
-    weightNormal: 'Normal',
-    weightBold: 'Bold',
-    weightLight: 'Light',
-    weightAuto: 'Auto',
-    
-    // Others
-    label: 'Label',
-    color: 'Color',
-    value: 'Value',
-    selectEntity: 'Select an entity'
-  }
+  // Transparency
+  transparent_card_background: 'Transparent card background',
+  transparent_gauge_background: 'Transparent gauge background',
+  transparent_center_background: 'Transparent center background',
+
+  // Custom theme
+  custom_background: 'Card background',
+  custom_gauge_background: 'Gauge background',
+  custom_center_background: 'Center background',
+  custom_text_color: 'Primary text color',
+  custom_secondary_text_color: 'Secondary text color',
+
+  // Gauge
+  entity: 'Entity',
+  min: 'Minimum value',
+  max: 'Maximum value',
+  unit: 'Unit',
+  decimals: 'Decimals',
+  leds_count: 'LEDs count',
+  led_size: 'LED size',
+  start_angle: 'Start angle',
+  arc_length: 'Arc length',
+  theme: 'Theme',
+  animation_duration: 'Animation duration',
+  bidirectional: 'Bidirectional mode',
+  hide_inactive_leds: 'Hide inactive LEDs',
+  smooth_transitions: 'Smooth transitions',
+
+  // Shadows
+  center_shadow: 'Center shadow',
+  center_shadow_blur: 'Center shadow blur',
+  center_shadow_spread: 'Center shadow spread',
+  outer_shadow: 'Outer shadow',
+  outer_shadow_blur: 'Outer shadow blur',
+  outer_shadow_spread: 'Outer shadow spread',
+
+  // Value and unit typography
+  value_font_family: 'Value font',
+  value_font_size: 'Value size',
+  value_font_weight: 'Value weight',
+  value_font_color: 'Value color',
+  unit_font_family: 'Unit font',
+  unit_font_size: 'Unit size',
+  unit_font_weight: 'Unit weight',
+  unit_font_color: 'Unit color',
+
+  // Markers
+  markers_radius: 'Markers radius',
+  markers_inside: 'Labels inside'
 };
+
+const HELPERS = {
+  inner_gauge_radius: 'Positioning radius of the inner LEDs. The larger it is, the closer the inner gauge gets to the outer one.',
+  start_angle: 'Where the gauge starts: 0° = top (12 o\'clock), positive values rotate clockwise.',
+  arc_length: 'Angular span of the gauge: 360° = full circle, 270° = dashboard style, 180° = half circle.',
+  markers_radius: 'Leave empty to follow the radius of the gauge.',
+  card_background: 'Any CSS value, for instance #222 or a gradient.',
+  custom_gauge_background: 'Any CSS value, for instance #444 or a gradient.',
+  custom_center_background: 'Any CSS value, for instance #333 or a gradient.',
+  title_font_color: 'Leave empty to follow the theme.',
+  value_font_color: 'Leave empty to follow the theme.',
+  unit_font_color: 'Leave empty to follow the theme.'
+};
+
+const TEXTS = {
+  innerGauge: 'Inner gauge',
+  outerGauge: 'Outer gauge',
+  titleTypography: 'Title typography',
+  transparency: 'Transparency',
+  customThemeColors: 'Custom theme colors',
+  shadows: 'Shadows',
+  valueUnitTypography: 'Value & unit typography',
+  severity: 'Color thresholds (severity)',
+  severityHelp: 'Colors applied depending on the value. The first threshold corresponds to the lowest values.',
+  markers: 'Markers',
+  zones: 'Colored zones',
+  addThreshold: 'Add threshold',
+  addMarker: 'Add marker',
+  addZone: 'Add zone',
+  remove: 'Remove',
+  color: 'Color',
+  value: 'Value',
+  label: 'Label',
+  from: 'From',
+  to: 'To',
+  opacity: 'Opacity',
+  emptySeverity: 'No threshold defined, the default colors are used.',
+  emptyMarkers: 'No marker defined.',
+  emptyZones: 'No zone defined.'
+};
+
+// Descriptions shown by `ha-form` inside an expandable section: it asks for the helper of
+// the section schema itself, which carries a title but no name
+const SECTION_HELPERS = {
+  [TEXTS.transparency]: 'These options force the matching background to transparent and take priority over the theme.'
+};
+
+const TITLE_POSITIONS = [
+  { value: 'bottom', label: 'Bottom' },
+  { value: 'top', label: 'Top' },
+  { value: 'inside-top', label: 'Inside top' },
+  { value: 'inside-bottom', label: 'Inside bottom' },
+  { value: 'none', label: 'None' }
+];
+
+const THEME_OPTIONS = [
+  { value: 'default', label: 'Default' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'custom', label: 'Custom' }
+];
+
+const FONT_WEIGHTS = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'bold', label: 'Bold' },
+  { value: 'lighter', label: 'Light' },
+  ...['100', '200', '300', '400', '500', '600', '700', '800', '900'].map(w => ({ value: w, label: w }))
+];
+
+// ============================================================================
+// FORM SCHEMAS
+// ============================================================================
+
+const num = (options = {}) => ({ selector: { number: { mode: 'box', ...options } } });
+const text = () => ({ selector: { text: {} } });
+const bool = () => ({ selector: { boolean: {} } });
+const select = (options) => ({ selector: { select: { mode: 'dropdown', options } } });
+const grid = (schema) => ({ name: '', type: 'grid', schema });
+const expandable = (title, icon, schema) => ({ name: '', type: 'expandable', title, icon, schema });
+
+function generalSchema(config) {
+  const schema = [
+    { name: 'name', ...text() },
+    grid([
+      { name: 'gauge_size', ...num({ min: 100, max: 400, unit_of_measurement: 'px' }) },
+      { name: 'inner_gauge_size', ...num({ min: 80, max: 300, unit_of_measurement: 'px' }) },
+      { name: 'inner_gauge_radius', ...num({ min: 40, max: 150, unit_of_measurement: 'px' }) },
+      { name: 'update_interval', ...num({ min: 100, max: 10000, step: 100, unit_of_measurement: 'ms' }) }
+    ]),
+    grid([
+      { name: 'title_position', ...select(TITLE_POSITIONS) },
+      { name: 'card_theme', ...select(THEME_OPTIONS) }
+    ]),
+    grid([
+      { name: 'hide_card', ...bool() },
+      { name: 'hide_shadows', ...bool() },
+      { name: 'power_save_mode', ...bool() },
+      { name: 'debounce_updates', ...bool() }
+    ]),
+    expandable(TEXTS.titleTypography, 'mdi:format-font', [
+      grid([
+        { name: 'title_font_size', ...text() },
+        { name: 'title_font_family', ...text() },
+        { name: 'title_font_weight', ...select(FONT_WEIGHTS) }
+      ]),
+      grid([
+        { name: 'title_font_color', ...text() },
+        { name: 'card_background', ...text() }
+      ])
+    ]),
+    expandable(TEXTS.transparency, 'mdi:checkerboard', [
+      grid([
+        { name: 'transparent_card_background', ...bool() },
+        { name: 'transparent_gauge_background', ...bool() },
+        { name: 'transparent_center_background', ...bool() }
+      ])
+    ])
+  ];
+
+  if (config.card_theme === 'custom') {
+    schema.push(expandable(TEXTS.customThemeColors, 'mdi:palette', [
+      grid([
+        { name: 'custom_background', ...text() },
+        { name: 'custom_gauge_background', ...text() },
+        { name: 'custom_center_background', ...text() }
+      ]),
+      grid([
+        { name: 'custom_text_color', ...text() },
+        { name: 'custom_secondary_text_color', ...text() }
+      ])
+    ]));
+  }
+
+  return schema;
+}
+
+function gaugeSchema(gauge) {
+  const shadowFields = [
+    grid([
+      { name: 'center_shadow', ...bool() },
+      { name: 'outer_shadow', ...bool() }
+    ])
+  ];
+
+  if (gauge.center_shadow) {
+    shadowFields.push(grid([
+      { name: 'center_shadow_blur', ...num({ min: 0, max: 100, unit_of_measurement: 'px' }) },
+      { name: 'center_shadow_spread', ...num({ min: 0, max: 100, unit_of_measurement: 'px' }) }
+    ]));
+  }
+
+  if (gauge.outer_shadow) {
+    shadowFields.push(grid([
+      { name: 'outer_shadow_blur', ...num({ min: 0, max: 100, unit_of_measurement: 'px' }) },
+      { name: 'outer_shadow_spread', ...num({ min: 0, max: 100, unit_of_measurement: 'px' }) }
+    ]));
+  }
+
+  return [
+    { name: 'entity', selector: { entity: {} } },
+    grid([
+      { name: 'min', ...num({ step: 'any' }) },
+      { name: 'max', ...num({ step: 'any' }) },
+      { name: 'unit', ...text() },
+      { name: 'decimals', ...num({ min: 0, max: 5 }) }
+    ]),
+    grid([
+      { name: 'leds_count', ...num({ min: 10, max: 200 }) },
+      { name: 'led_size', ...num({ min: 2, max: 20, unit_of_measurement: 'px' }) },
+      { name: 'start_angle', ...num({ min: -360, max: 360, unit_of_measurement: '°' }) },
+      { name: 'arc_length', ...num({ min: 10, max: 360, unit_of_measurement: '°' }) }
+    ]),
+    grid([
+      { name: 'theme', ...select(THEME_OPTIONS) },
+      { name: 'animation_duration', ...num({ min: 0, max: 5000, step: 100, unit_of_measurement: 'ms' }) }
+    ]),
+    grid([
+      { name: 'bidirectional', ...bool() },
+      { name: 'hide_inactive_leds', ...bool() },
+      { name: 'smooth_transitions', ...bool() }
+    ]),
+    expandable(TEXTS.shadows, 'mdi:box-shadow', shadowFields),
+    expandable(TEXTS.valueUnitTypography, 'mdi:format-font', [
+      grid([
+        { name: 'value_font_family', ...text() },
+        { name: 'value_font_size', ...text() },
+        { name: 'value_font_weight', ...select(FONT_WEIGHTS) },
+        { name: 'value_font_color', ...text() }
+      ]),
+      grid([
+        { name: 'unit_font_family', ...text() },
+        { name: 'unit_font_size', ...text() },
+        { name: 'unit_font_weight', ...select(FONT_WEIGHTS) },
+        { name: 'unit_font_color', ...text() }
+      ])
+    ])
+  ];
+}
+
+const MARKERS_OPTIONS_SCHEMA = [
+  grid([
+    { name: 'markers_radius', ...num({ min: 10, max: 300, unit_of_measurement: 'px' }) },
+    { name: 'markers_inside', ...bool() }
+  ])
+];
 
 // ============================================================================
 // UTILITIES
 // ============================================================================
 
 /**
- * Escape a value before interpolating it into the editor markup.
- * The editor is built with innerHTML, so a quote in a name, a font family or a marker
- * label would otherwise break out of its attribute.
- * @param {*} value - Value coming from the card configuration
- * @returns {string} HTML-safe string
+ * Remove the keys Home Assistant should not store: an empty field means "use the default",
+ * and writing every default back would bloat the YAML.
+ * @param {Object} object - Configuration object
+ * @returns {Object} Same object without its empty entries
  */
-function esc(value) {
-  if (value === undefined || value === null) return '';
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+function stripEmpty(object) {
+  const cleaned = {};
+
+  for (const [key, value] of Object.entries(object)) {
+    if (value === undefined || value === null || value === '') continue;
+    cleaned[key] = value;
+  }
+
+  return cleaned;
+}
+
+/**
+ * Fill in the options whose default is `true` before handing the data to `ha-form`:
+ * a switch cannot be tri-state, so an unset option would be shown as disabled while the
+ * card actually enables it.
+ * @param {Object} gauge - Configuration of a single gauge
+ * @returns {Object} Gauge configuration with its "on by default" options resolved
+ */
+function withGaugeDefaults(gauge) {
+  return {
+    ...gauge,
+    smooth_transitions: gauge.smooth_transitions !== false,
+    markers_inside: gauge.markers_inside !== false
+  };
+}
+
+/**
+ * Create an element and assign properties on it
+ * @param {string} tag - Tag name
+ * @param {Object} props - Properties to assign
+ * @returns {HTMLElement} The created element
+ */
+function createElement(tag, props = {}) {
+  const element = document.createElement(tag);
+  Object.assign(element, props);
+  return element;
+}
+
+/**
+ * Pick the button element the running Home Assistant frontend provides
+ * @returns {string} Tag name of an available button component
+ */
+function buttonTag() {
+  if (customElements.get('ha-button')) return 'ha-button';
+  if (customElements.get('mwc-button')) return 'mwc-button';
+  return 'button';
 }
 
 // ============================================================================
@@ -168,1342 +361,491 @@ class DualGaugeCardEditor extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this._config = null;
     this._hass = null;
-    this._hasRendered = false;
+    this._rendered = false;
+    this._forms = {};
+    this._lists = {};
+    this._computeLabel = (schema) => LABELS[schema.name] || schema.name;
+    this._computeHelper = (schema) => HELPERS[schema.name] || SECTION_HELPERS[schema.title];
   }
 
   setConfig(config) {
-    // Clone the config because the object passed by Home Assistant is frozen
-    // and cannot be modified directly
-    config = config ? JSON.parse(JSON.stringify(config)) : {};
-    
-    // Ensure type is present
-    if (!config.type) {
-      config.type = 'custom:dual-gauge-card';
-    }
-    
-    // Set language (always English)
-    this._lang = 'en';
-    
-    // Translation function
-    this._t = (key) => {
-      return translations['en']?.[key] || key;
-    };
-    
-    // Ensure gauges exists with a deep copy
-    if (!config.gauges) {
-      config.gauges = [{}, {}];
-    } else {
-      // Clone each gauge to avoid shared references
-      config.gauges = config.gauges.map(g => ({ ...g }));
-    }
-    
-    const isFirstRender = !this._config;
-    
-    // Compare configs to see if re-render is necessary
-    const shouldRender = isFirstRender || this._shouldReRender(this._config, config);
-    
-    this._config = config;
-    
-    if (shouldRender) {
-      this._render();
-    } else {
-      // Update field values without full re-render
-      this._updateAllFieldValues();
-    }
-  }
+    // Home Assistant hands over a frozen object, clone it before touching anything
+    const cloned = config ? JSON.parse(JSON.stringify(config)) : {};
 
-  _shouldReRender(oldConfig, newConfig) {
-    if (!oldConfig) return true;
-    
-    // Check if the number of items in lists has changed
-    for (let i = 0; i < 2; i++) {
-      const oldGauge = oldConfig.gauges?.[i] || {};
-      const newGauge = newConfig.gauges?.[i] || {};
-      
-      // Check severity
-      const oldSeverity = (oldGauge.severity || []).length;
-      const newSeverity = (newGauge.severity || []).length;
-      if (oldSeverity !== newSeverity) return true;
-      
-      // Check markers
-      const oldMarkers = (oldGauge.markers || []).length;
-      const newMarkers = (newGauge.markers || []).length;
-      if (oldMarkers !== newMarkers) return true;
-      
-      // Check zones
-      const oldZones = (oldGauge.zones || []).length;
-      const newZones = (newGauge.zones || []).length;
-      if (oldZones !== newZones) return true;
+    if (!cloned.type) {
+      cloned.type = 'custom:dual-gauge-card';
     }
-    
-    // Check if key fields have changed (other than simple values)
-    const keysToCheck = ['gauge_size', 'inner_gauge_size', 'title_position', 'card_theme'];
-    for (const key of keysToCheck) {
-      if (oldConfig[key] !== newConfig[key]) return true;
-    }
-    
-    return false;
-  }
 
-  _updatePickerValues() {
-    // Entity pickers are now simple text inputs
-    // Values are updated via _updateAllFieldValues()
-  }
-
-  _updateAllFieldValues() {
-    // Update all field values without re-rendering
-    if (!this._config) return;
-    
-    const config = this._config;
-    
-    // General fields
-    const setValue = (id, value) => {
-      const el = this.shadowRoot.getElementById(id);
-      if (el && el.value !== value) {
-        el.value = value;
-      }
-    };
-    
-    const setChecked = (id, checked) => {
-      const el = this.shadowRoot.getElementById(id);
-      if (el && el.checked !== checked) {
-        el.checked = checked;
-      }
-    };
-    
-    setValue('name', config.name || '');
-    setValue('gauge_size', config.gauge_size || 200);
-    setValue('inner_gauge_size', config.inner_gauge_size || 130);
-    setValue('inner_gauge_radius', config.inner_gauge_radius || 65);
-    setValue('title_position', config.title_position || 'bottom');
-    setValue('card_theme', config.card_theme || 'default');
-    
-    setChecked('hide_card', config.hide_card || false);
-    setChecked('power_save_mode', config.power_save_mode || false);
-    setChecked('debounce_updates', config.debounce_updates || false);
-    setChecked('hide_shadows', config.hide_shadows || false);
-    setValue('update_interval', config.update_interval || 1000);
-    
-    // For each gauge
-    for (let i = 0; i < 2; i++) {
-      const gauge = config.gauges?.[i] || {};
-      
-      // Numeric and text values
-      setValue(`gauge${i}_entity`, gauge.entity || '');
-      setValue(`gauge${i}_min`, gauge.min ?? 0);
-      setValue(`gauge${i}_max`, gauge.max ?? 100);
-      setValue(`gauge${i}_unit`, gauge.unit || '');
-      setValue(`gauge${i}_decimals`, gauge.decimals ?? 1);
-      setValue(`gauge${i}_leds_count`, gauge.leds_count || (i === 0 ? 80 : 100));
-      setValue(`gauge${i}_led_size`, gauge.led_size || (i === 0 ? 6 : 8));
-      setValue(`gauge${i}_start_angle`, gauge.start_angle !== undefined ? gauge.start_angle : 0);
-      setValue(`gauge${i}_arc_length`, gauge.arc_length !== undefined ? gauge.arc_length : 360);
-      setValue(`gauge${i}_markers_radius`, gauge.markers_radius !== undefined ? gauge.markers_radius : '');
-      setChecked(`gauge${i}_markers_inside`, gauge.markers_inside !== false);
-      setValue(`gauge${i}_theme`, gauge.theme || 'default');
-      setValue(`gauge${i}_animation_duration`, gauge.animation_duration || 800);
-      
-      // Checkboxes
-      setChecked(`gauge${i}_bidirectional`, gauge.bidirectional || false);
-      setChecked(`gauge${i}_hide_inactive_leds`, gauge.hide_inactive_leds || false);
-      setChecked(`gauge${i}_smooth_transitions`, gauge.smooth_transitions !== false);
-      setChecked(`gauge${i}_center_shadow`, gauge.center_shadow || false);
-      setChecked(`gauge${i}_outer_shadow`, gauge.outer_shadow || false);
-      
-      // Shadows
-      setValue(`gauge${i}_center_shadow_blur`, gauge.center_shadow_blur || 30);
-      setValue(`gauge${i}_center_shadow_spread`, gauge.center_shadow_spread || 15);
-      setValue(`gauge${i}_outer_shadow_blur`, gauge.outer_shadow_blur || 30);
-      setValue(`gauge${i}_outer_shadow_spread`, gauge.outer_shadow_spread || 15);
-      
-      // Value typography
-      setValue(`gauge${i}_value_font_family`, gauge.value_font_family || '');
-      // Normalize size for display (add px if just a number)
-      const displayValueSize = gauge.value_font_size ? 
-        (/^\d+(\.\d+)?$/.test(gauge.value_font_size.trim()) ? gauge.value_font_size.trim() + 'px' : gauge.value_font_size) : '';
-      setValue(`gauge${i}_value_font_size`, displayValueSize);
-      setValue(`gauge${i}_value_font_weight`, gauge.value_font_weight || '');
-      setValue(`gauge${i}_value_font_color`, gauge.value_font_color || '#ffffff');
-      setValue(`gauge${i}_value_font_color_text`, gauge.value_font_color || '');
-      
-      // Unit typography
-      setValue(`gauge${i}_unit_font_family`, gauge.unit_font_family || '');
-      // Normalize size for display
-      const displayUnitSize = gauge.unit_font_size ? 
-        (/^\d+(\.\d+)?$/.test(gauge.unit_font_size.trim()) ? gauge.unit_font_size.trim() + 'px' : gauge.unit_font_size) : '';
-      setValue(`gauge${i}_unit_font_size`, displayUnitSize);
-      setValue(`gauge${i}_unit_font_weight`, gauge.unit_font_weight || '');
-      setValue(`gauge${i}_unit_font_color`, gauge.unit_font_color || '#dddddd');
-      setValue(`gauge${i}_unit_font_color_text`, gauge.unit_font_color || '');
+    if (!Array.isArray(cloned.gauges)) {
+      cloned.gauges = [{}, {}];
     }
+    while (cloned.gauges.length < 2) {
+      cloned.gauges.push({});
+    }
+
+    this._config = cloned;
+    this._updateEditor();
   }
 
   set hass(hass) {
-    const oldHass = this._hass;
     this._hass = hass;
-    
-    // If hass is set for the first time and we already have a config, render
-    if (!oldHass && hass && this._config && !this._hasRendered) {
-      this._hasRendered = true;
-      this._render();
-    }
-    
-    // Update entity select options if hass is now available and we have a rendered shadowRoot
-    if (hass && this.shadowRoot && this._hasRendered) {
-      this._updateEntitySelects();
-    }
-  }
-
-  _updateEntitySelects() {
-    // Update entity select options when hass becomes available
-    if (!this._hass || !this._hass.states) return;
-
-    for (let i = 0; i < 2; i++) {
-      const select = this.shadowRoot.getElementById(`gauge${i}_entity`);
-      if (!select) continue;
-
-      const currentValue = this._config?.gauges?.[i]?.entity || '';
-
-      // Home Assistant pushes a new hass object on every state change. Rebuilding the whole
-      // entity list each time would freeze the editor, so only rebuild when the list of
-      // entities or the selection actually changed.
-      const signature = `${Object.keys(this._hass.states).length}|${currentValue}`;
-      if (select.dataset.signature === signature) continue;
-
-      select.innerHTML = this._renderEntityOptions(currentValue);
-      select.dataset.signature = signature;
-    }
+    this._updateEditor();
   }
 
   get hass() {
     return this._hass;
   }
 
-  _render() {
-    this._hasRendered = true;
-    const config = this._config || {};
-    const gauge0 = config.gauges?.[0] || {};
-    const gauge1 = config.gauges?.[1] || {};
+  connectedCallback() {
+    this._updateEditor();
+  }
+
+  _updateEditor() {
+    if (!this._config || !this._hass || !this.isConnected) return;
+
+    if (!this._rendered) {
+      if (!this._rendering) {
+        this._rendering = this._render();
+      }
+      return;
+    }
+
+    this._applyConfig();
+  }
+
+  /**
+   * The Home Assistant form components live in the editor bundle, which is not always
+   * loaded yet when a custom editor is created from a dashboard opened in YAML mode.
+   */
+  async _ensureComponents() {
+    if (customElements.get('ha-form') && customElements.get('ha-expansion-panel')) return;
+
+    if (window.loadCardHelpers) {
+      try {
+        const helpers = await window.loadCardHelpers();
+        const card = await helpers.createCardElement({ type: 'entities', entities: [] });
+        await card.constructor.getConfigElement();
+      } catch (error) {
+        console.warn('Dual Gauge Card: could not preload Home Assistant editor components', error);
+      }
+    }
+
+    await Promise.all([
+      customElements.whenDefined('ha-form'),
+      customElements.whenDefined('ha-expansion-panel')
+    ]);
+  }
+
+  async _render() {
+    await this._ensureComponents();
+
+    if (!this._config) return;
 
     this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
-          padding: 16px;
-          --editor-primary-color: var(--primary-color, #03a9f4);
-          --editor-text-color: var(--primary-text-color, #e0e0e0);
-          --editor-secondary-text: var(--secondary-text-color, #9e9e9e);
-          --editor-bg-color: var(--card-background-color, #1c1c1c);
-          --editor-divider: var(--divider-color, rgba(255,255,255,0.12));
-          --editor-input-bg: var(--input-fill-color, #2c2c2c);
-          --editor-border: var(--outline-color, rgba(255,255,255,0.2));
         }
-        .section {
-          margin-bottom: 16px;
-          padding: 16px;
-          border: 1px solid var(--editor-divider);
-          border-radius: 12px;
-          background: var(--editor-bg-color);
-          color: var(--editor-text-color);
-        }
-        .section-title {
-          font-size: 13px;
-          font-weight: 600;
-          margin-bottom: 16px;
-          color: var(--editor-primary-color);
-          text-transform: uppercase;
-          letter-spacing: 0.8px;
-          border-bottom: 1px solid var(--editor-divider);
-          padding-bottom: 8px;
-        }
-        .row {
+        .content {
           display: flex;
-          flex-wrap: wrap;
+          flex-direction: column;
           gap: 16px;
-          margin-bottom: 16px;
-          align-items: flex-end;
         }
-        .row:last-child {
-          margin-bottom: 0;
+        .panel-content {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          padding: 8px 16px 16px;
         }
-        .field {
-          flex: 1;
-          min-width: 140px;
-        }
-        .field.full {
-          flex: 1 0 100%;
-        }
-        .field label {
-          display: block;
+        .helper {
+          color: var(--secondary-text-color);
           font-size: 12px;
-          font-weight: 500;
-          color: var(--editor-secondary-text);
-          margin-bottom: 6px;
-        }
-        .field input,
-        .field select {
-          width: 100%;
-          padding: 10px 12px;
-          border: 1px solid var(--editor-border);
-          border-radius: 6px;
-          background: var(--editor-input-bg);
-          color: var(--editor-text-color);
-          font-size: 14px;
-          box-sizing: border-box;
-          transition: border-color 0.2s;
-        }
-        .field input:focus,
-        .field select:focus {
-          outline: none;
-          border-color: var(--editor-primary-color);
-        }
-        .field input[type="number"] {
-          width: 100%;
-        }
-        .field input[type="checkbox"] {
-          width: 18px;
-          height: 18px;
-          margin: 0;
-          accent-color: var(--editor-primary-color);
-        }
-        .field.checkbox {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          min-height: 40px;
-        }
-        .field.checkbox label {
-          margin-bottom: 0;
-          color: var(--editor-text-color);
-          font-weight: 400;
-        }
-        .gauge-section {
-          border-left: 4px solid var(--editor-primary-color);
-        }
-        .gauge-section.outer {
-          border-left-color: #ff9800;
-        }
-        .sub-section {
-          margin-top: 16px;
-          padding-top: 16px;
-          border-top: 1px dashed var(--editor-divider);
-        }
-        .sub-title {
-          font-size: 12px;
-          font-weight: 600;
-          color: var(--editor-text-color);
-          margin-bottom: 12px;
-        }
-        .color-row {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 10px;
-        }
-        .color-row input[type="color"] {
-          width: 44px;
-          height: 36px;
-          padding: 2px;
-          border: 1px solid var(--editor-border);
-          border-radius: 6px;
-          cursor: pointer;
-          background: var(--editor-input-bg);
-        }
-        .color-row input[type="text"] {
-          flex: 1;
-          min-width: 80px;
-        }
-        .color-row input[type="number"] {
-          width: 90px;
-        }
-        .add-btn, .remove-btn {
-          padding: 8px 16px;
-          font-size: 13px;
-          font-weight: 500;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: opacity 0.2s;
-          background: var(--editor-primary-color);
-          color: white;
-        }
-        .add-btn:hover, .remove-btn:hover {
-          opacity: 0.85;
-        }
-        .remove-btn {
-          background: #e74c3c;
-          padding: 8px 14px;
-          font-size: 14px;
-          line-height: 1;
-        }
-        .severity-list, .markers-list, .zones-list {
-          margin-top: 12px;
-        }
-        .severity-item, .marker-item, .zone-item {
-          display: flex;
-          gap: 10px;
-          margin-bottom: 10px;
-          align-items: center;
-          padding: 8px;
-          background: rgba(255,255,255,0.03);
-          border-radius: 8px;
-        }
-        .severity-item input,
-        .marker-item input,
-        .zone-item input {
-          background: var(--editor-input-bg);
-          border: 1px solid var(--editor-border);
-          border-radius: 4px;
-          padding: 6px 10px;
-          color: var(--editor-text-color);
-          font-size: 13px;
-        }
-        .entity-picker-wrapper {
-          flex: 1;
-          min-width: 200px;
-        }
-        .help-text {
-          font-size: 11px;
-          color: var(--editor-secondary-text);
-          margin-top: 6px;
-          font-style: italic;
           line-height: 1.4;
         }
-        /* Specific styles for dynamic lists */
-        .severity-item input[data-field="value"],
-        .marker-item input[data-field="value"] {
-          width: 80px;
+        .empty {
+          color: var(--secondary-text-color);
+          font-size: 13px;
+          font-style: italic;
         }
-        .zone-item input[data-field="from"],
-        .zone-item input[data-field="to"] {
-          width: 70px;
+        .list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
         }
-        .zone-item input[data-field="opacity"] {
-          width: 70px;
+        .list-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .list-row ha-textfield {
+          flex: 1;
+          min-width: 0;
+        }
+        .list-row ha-textfield.narrow {
+          flex: 0 1 90px;
+        }
+        .swatch {
+          flex: 0 0 auto;
+          width: 40px;
+          height: 40px;
+          padding: 2px;
+          border: 1px solid var(--outline-color, var(--divider-color));
+          border-radius: 8px;
+          background: var(--card-background-color);
+          cursor: pointer;
+        }
+        .actions {
+          display: flex;
         }
       </style>
-
-      <div class="section">
-        <div class="section-title">${this._t('generalConfig')}</div>
-        
-        <div class="row">
-          <div class="field full">
-            <label>${this._t('cardName')}</label>
-            <input type="text" id="name" value="${esc(config.name || '')}" placeholder="Dual Gauge">
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="field">
-            <label>${this._t('outerGaugeSize')}</label>
-            <input type="number" id="gauge_size" value="${esc(config.gauge_size || 200)}" min="100" max="400">
-          </div>
-          <div class="field">
-            <label>${this._t('innerGaugeSize')}</label>
-            <input type="number" id="inner_gauge_size" value="${esc(config.inner_gauge_size || 130)}" min="80" max="300">
-          </div>
-          <div class="field">
-            <label>${this._t('innerGaugeRadius')}</label>
-            <input type="number" id="inner_gauge_radius" value="${esc(config.inner_gauge_radius || 65)}" min="40" max="150">
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="field">
-            <label>${this._t('titlePosition')}</label>
-            <select id="title_position">
-              <option value="bottom" ${config.title_position === 'bottom' ? 'selected' : ''}>${this._t('positionBottom')}</option>
-              <option value="top" ${config.title_position === 'top' ? 'selected' : ''}>${this._t('positionTop')}</option>
-              <option value="inside-top" ${config.title_position === 'inside-top' ? 'selected' : ''}>${this._t('positionInsideTop')}</option>
-              <option value="inside-bottom" ${config.title_position === 'inside-bottom' ? 'selected' : ''}>${this._t('positionInsideBottom')}</option>
-              <option value="none" ${config.title_position === 'none' ? 'selected' : ''}>${this._t('positionNone')}</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>${this._t('cardTheme')}</label>
-            <select id="card_theme">
-              <option value="default" ${config.card_theme === 'default' ? 'selected' : ''}>${this._t('themeDefault')}</option>
-              <option value="light" ${config.card_theme === 'light' ? 'selected' : ''}>${this._t('themeLight')}</option>
-              <option value="dark" ${config.card_theme === 'dark' ? 'selected' : ''}>${this._t('themeDark')}</option>
-              <option value="custom" ${config.card_theme === 'custom' ? 'selected' : ''}>${this._t('themeCustom')}</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="field checkbox">
-            <input type="checkbox" id="hide_card" ${config.hide_card ? 'checked' : ''}>
-            <label for="hide_card">${this._t('hideCard')}</label>
-          </div>
-          <div class="field checkbox">
-            <input type="checkbox" id="power_save_mode" ${config.power_save_mode ? 'checked' : ''}>
-            <label for="power_save_mode">${this._t('powerSaveMode')}</label>
-          </div>
-          <div class="field checkbox">
-            <input type="checkbox" id="debounce_updates" ${config.debounce_updates ? 'checked' : ''}>
-            <label for="debounce_updates">${this._t('debounceUpdates')}</label>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="field checkbox">
-            <input type="checkbox" id="hide_shadows" ${config.hide_shadows ? 'checked' : ''}>
-            <label for="hide_shadows">${this._t('hideShadows')}</label>
-          </div>
-          <div class="field">
-            <label>${this._t('updateInterval')}</label>
-            <input type="number" id="update_interval" value="${esc(config.update_interval || 1000)}" min="100" max="10000" step="100">
-          </div>
-        </div>
-      </div>
-
-      ${this._renderCustomThemeSection(config)}
-      ${this._renderTitleTypographySection(config)}
-      ${this._renderTransparencySection(config)}
-
-      ${this._renderGaugeSection(0, gauge0, this._t('innerGauge'), 'inner')}
-      ${this._renderGaugeSection(1, gauge1, this._t('outerGauge'), 'outer')}
+      <div class="content" id="content"></div>
     `;
 
-    // Assign hass and values to entity pickers after rendering
-    this._updateEntityPickers();
-    
-    this._attachListeners();
-  }
+    const content = this.shadowRoot.getElementById('content');
 
-  _updateEntityPickers() {
-    // Entity pickers are now select dropdowns
-    this._updateEntitySelects();
-  }
-
-  _renderCustomThemeSection(config) {
-    const isCustom = config.card_theme === 'custom';
-    return `
-      <div class="section" id="custom_theme_section" style="display: ${isCustom ? 'block' : 'none'};">
-        <div class="section-title">${this._t('customThemeColors')}</div>
-        
-        <div class="row">
-          <div class="field">
-            <label>${this._t('cardBackground')}</label>
-            <div class="color-row">
-              <input type="color" id="custom_background" value="${esc(config.custom_background || '#222222')}" data-field="color">
-              <input type="text" id="custom_background_text" value="${esc(config.custom_background || '#222222')}" placeholder="#222222" data-field="color_text">
-            </div>
-          </div>
-          <div class="field">
-            <label>${this._t('gaugeBackground')}</label>
-            <div class="color-row">
-              <input type="color" id="custom_gauge_background" value="${esc(config.custom_gauge_background?.startsWith('#') ? config.custom_gauge_background : '#444444')}" data-field="color">
-              <input type="text" id="custom_gauge_background_text" value="${esc(config.custom_gauge_background || '#444444')}" placeholder="#444444 or gradient" data-field="color_text">
-            </div>
-          </div>
-          <div class="field">
-            <label>${this._t('centerBackground')}</label>
-            <div class="color-row">
-              <input type="color" id="custom_center_background" value="${esc(config.custom_center_background?.startsWith('#') ? config.custom_center_background : '#333333')}" data-field="color">
-              <input type="text" id="custom_center_background_text" value="${esc(config.custom_center_background || '#333333')}" placeholder="#333333 or gradient" data-field="color_text">
-            </div>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="field">
-            <label>${this._t('primaryTextColor')}</label>
-            <div class="color-row">
-              <input type="color" id="custom_text_color" value="${esc(config.custom_text_color || '#ffffff')}" data-field="color">
-              <input type="text" id="custom_text_color_text" value="${esc(config.custom_text_color || '#ffffff')}" placeholder="#ffffff" data-field="color_text">
-            </div>
-          </div>
-          <div class="field">
-            <label>${this._t('secondaryTextColor')}</label>
-            <div class="color-row">
-              <input type="color" id="custom_secondary_text_color" value="${esc(config.custom_secondary_text_color || '#dddddd')}" data-field="color">
-              <input type="text" id="custom_secondary_text_color_text" value="${esc(config.custom_secondary_text_color || '#dddddd')}" placeholder="#dddddd" data-field="color_text">
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  _renderTitleTypographySection(config) {
-    return `
-      <div class="section">
-        <div class="section-title">${this._t('titleTypography')}</div>
-        
-        <div class="row">
-          <div class="field">
-            <label>${this._t('fontSize')}</label>
-            <input type="text" id="title_font_size" value="${esc(config.title_font_size || '16px')}" placeholder="16px">
-          </div>
-          <div class="field">
-            <label>${this._t('fontFamily')}</label>
-            <input type="text" id="title_font_family" value="${esc(config.title_font_family || '')}" placeholder="inherit">
-          </div>
-          <div class="field">
-            <label>${this._t('fontWeight')}</label>
-            <select id="title_font_weight">
-              <option value="normal" ${config.title_font_weight === 'normal' ? 'selected' : ''}>${this._t('weightNormal')}</option>
-              <option value="bold" ${config.title_font_weight === 'bold' ? 'selected' : ''}>${this._t('weightBold')}</option>
-              <option value="lighter" ${config.title_font_weight === 'lighter' ? 'selected' : ''}>${this._t('weightLight')}</option>
-              <option value="100" ${config.title_font_weight === '100' ? 'selected' : ''}>100</option>
-              <option value="200" ${config.title_font_weight === '200' ? 'selected' : ''}>200</option>
-              <option value="300" ${config.title_font_weight === '300' ? 'selected' : ''}>300</option>
-              <option value="400" ${config.title_font_weight === '400' ? 'selected' : ''}>400</option>
-              <option value="500" ${config.title_font_weight === '500' ? 'selected' : ''}>500</option>
-              <option value="600" ${config.title_font_weight === '600' ? 'selected' : ''}>600</option>
-              <option value="700" ${config.title_font_weight === '700' ? 'selected' : ''}>700</option>
-              <option value="800" ${config.title_font_weight === '800' ? 'selected' : ''}>800</option>
-              <option value="900" ${config.title_font_weight === '900' ? 'selected' : ''}>900</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="field">
-            <label>${this._t('titleColor')}</label>
-            <div class="color-row">
-              <input type="color" id="title_font_color" value="${esc(config.title_font_color || '#ffffff')}" data-field="color">
-              <input type="text" id="title_font_color_text" value="${esc(config.title_font_color || '')}" placeholder="Auto" data-field="color_text">
-            </div>
-          </div>
-          <div class="field">
-            <label>${this._t('cardBackgroundCss')}</label>
-            <input type="text" id="card_background" value="${esc(config.card_background || '')}" placeholder="e.g. #222 or gradient">
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  _renderTransparencySection(config) {
-    return `
-      <div class="section">
-        <div class="section-title">${this._t('transparencyOptions')}</div>
-        <div class="help-text">${this._t('transparencyHelp')}</div>
-        
-        <div class="row">
-          <div class="field checkbox">
-            <input type="checkbox" id="transparent_card_background" ${config.transparent_card_background ? 'checked' : ''}>
-            <label for="transparent_card_background">${this._t('transparentCardBg')}</label>
-          </div>
-          <div class="field checkbox">
-            <input type="checkbox" id="transparent_gauge_background" ${config.transparent_gauge_background ? 'checked' : ''}>
-            <label for="transparent_gauge_background">${this._t('transparentGaugeBg')}</label>
-          </div>
-          <div class="field checkbox">
-            <input type="checkbox" id="transparent_center_background" ${config.transparent_center_background ? 'checked' : ''}>
-            <label for="transparent_center_background">${this._t('transparentCenterBg')}</label>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  _renderEntityOptions(selectedEntity) {
-    if (!this._hass || !this._hass.states) {
-      return `<option value="">${this._t('selectEntity')}</option>`;
-    }
-    
-    const entities = Object.keys(this._hass.states).sort();
-    const options = entities.map(entityId => {
-      const selected = entityId === selectedEntity ? 'selected' : '';
-      return `<option value="${esc(entityId)}" ${selected}>${esc(entityId)}</option>`;
-    }).join('');
-    
-    return `<option value="">-- ${this._t('selectEntity')} --</option>${options}`;
-  }
-
-  _renderGaugeSection(index, gauge, title, cssClass) {
-    const severity = gauge.severity || [
-      { color: '#4caf50', value: 0 },
-      { color: '#ff9800', value: 50 },
-      { color: '#f44336', value: 75 }
-    ];
-    const markers = gauge.markers || [];
-    const zones = gauge.zones || [];
-
-    return `
-      <div class="section gauge-section ${cssClass}">
-        <div class="section-title">${title}</div>
-        
-        <div class="row">
-          <div class="field full">
-            <label>${this._t('entity')}</label>
-            <select id="gauge${index}_entity">
-              ${this._renderEntityOptions(gauge.entity)}
-            </select>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="field">
-            <label>${this._t('minValue')}</label>
-            <input type="number" id="gauge${index}_min" value="${esc(gauge.min !== undefined ? gauge.min : 0)}" step="any">
-          </div>
-          <div class="field">
-            <label>${this._t('maxValue')}</label>
-            <input type="number" id="gauge${index}_max" value="${esc(gauge.max !== undefined ? gauge.max : 100)}" step="any">
-          </div>
-          <div class="field">
-            <label>${this._t('unit')}</label>
-            <input type="text" id="gauge${index}_unit" value="${esc(gauge.unit || '')}" placeholder="%">
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="field">
-            <label>${this._t('decimals')}</label>
-            <input type="number" id="gauge${index}_decimals" value="${esc(gauge.decimals !== undefined ? gauge.decimals : 1)}" min="0" max="5">
-          </div>
-          <div class="field">
-            <label>${this._t('ledsCount')}</label>
-            <input type="number" id="gauge${index}_leds_count" value="${esc(gauge.leds_count || (index === 0 ? 80 : 100))}" min="10" max="200">
-          </div>
-          <div class="field">
-            <label>${this._t('ledSize')}</label>
-            <input type="number" id="gauge${index}_led_size" value="${esc(gauge.led_size || (index === 0 ? 6 : 8))}" min="2" max="20">
-          </div>
-        </div>
-
-        <div class="sub-section">
-          <div class="sub-title">${this._t('arcGeometry')}</div>
-          <div class="help-text">${this._t('arcGeometryHelp')}</div>
-          <div class="row">
-            <div class="field">
-              <label>${this._t('startAngle')}</label>
-              <input type="number" id="gauge${index}_start_angle" value="${esc(gauge.start_angle !== undefined ? gauge.start_angle : 0)}" min="-360" max="360" step="1">
-            </div>
-            <div class="field">
-              <label>${this._t('arcLength')}</label>
-              <input type="number" id="gauge${index}_arc_length" value="${esc(gauge.arc_length !== undefined ? gauge.arc_length : 360)}" min="10" max="360" step="1">
-            </div>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="field">
-            <label>${this._t('theme')}</label>
-            <select id="gauge${index}_theme">
-              <option value="default" ${gauge.theme === 'default' ? 'selected' : ''}>${this._t('themeDefault')}</option>
-              <option value="light" ${gauge.theme === 'light' ? 'selected' : ''}>${this._t('themeLight')}</option>
-              <option value="dark" ${gauge.theme === 'dark' ? 'selected' : ''}>${this._t('themeDark')}</option>
-              <option value="custom" ${gauge.theme === 'custom' ? 'selected' : ''}>${this._t('themeCustom')}</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>${this._t('animationDuration')}</label>
-            <input type="number" id="gauge${index}_animation_duration" value="${esc(gauge.animation_duration || 800)}" min="0" max="5000" step="100">
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="field checkbox">
-            <input type="checkbox" id="gauge${index}_bidirectional" ${gauge.bidirectional ? 'checked' : ''}>
-            <label for="gauge${index}_bidirectional">${this._t('bidirectionalMode')}</label>
-          </div>
-          <div class="field checkbox">
-            <input type="checkbox" id="gauge${index}_hide_inactive_leds" ${gauge.hide_inactive_leds ? 'checked' : ''}>
-            <label for="gauge${index}_hide_inactive_leds">${this._t('hideInactiveLeds')}</label>
-          </div>
-          <div class="field checkbox">
-            <input type="checkbox" id="gauge${index}_smooth_transitions" ${gauge.smooth_transitions !== false ? 'checked' : ''}>
-            <label for="gauge${index}_smooth_transitions">${this._t('smoothTransitions')}</label>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="field checkbox">
-            <input type="checkbox" id="gauge${index}_center_shadow" ${gauge.center_shadow ? 'checked' : ''}>
-            <label for="gauge${index}_center_shadow">${this._t('centerShadow')}</label>
-          </div>
-          <div class="field checkbox">
-            <input type="checkbox" id="gauge${index}_outer_shadow" ${gauge.outer_shadow ? 'checked' : ''}>
-            <label for="gauge${index}_outer_shadow">${this._t('outerShadow')}</label>
-          </div>
-        </div>
-
-        <div class="row" id="gauge${index}_center_shadow_options" style="display: ${gauge.center_shadow ? 'flex' : 'none'};">
-          <div class="field">
-            <label>${this._t('centerShadowBlur')}</label>
-            <input type="number" id="gauge${index}_center_shadow_blur" value="${esc(gauge.center_shadow_blur || 30)}" min="0" max="100">
-          </div>
-          <div class="field">
-            <label>${this._t('centerShadowSpread')}</label>
-            <input type="number" id="gauge${index}_center_shadow_spread" value="${esc(gauge.center_shadow_spread || 15)}" min="0" max="100">
-          </div>
-        </div>
-
-        <div class="row" id="gauge${index}_outer_shadow_options" style="display: ${gauge.outer_shadow ? 'flex' : 'none'};">
-          <div class="field">
-            <label>${this._t('outerShadowBlur')}</label>
-            <input type="number" id="gauge${index}_outer_shadow_blur" value="${esc(gauge.outer_shadow_blur || 30)}" min="0" max="100">
-          </div>
-          <div class="field">
-            <label>${this._t('outerShadowSpread')}</label>
-            <input type="number" id="gauge${index}_outer_shadow_spread" value="${esc(gauge.outer_shadow_spread || 15)}" min="0" max="100">
-          </div>
-        </div>
-
-        <div class="sub-section">
-          <div class="sub-title">${this._t('severityThresholds')}</div>
-          <div class="help-text">${this._t('severityHelp')}</div>
-          <div class="severity-list" id="gauge${index}_severity_list">
-            ${severity.map((s, i) => `
-              <div class="severity-item" data-index="${i}">
-                <input type="color" value="${esc(s.color)}" data-field="color">
-                <input type="text" value="${esc(s.color)}" placeholder="#4caf50" data-field="color_text" style="width: 80px;">
-                <input type="number" value="${esc(s.value)}" placeholder="Value" data-field="value" min="0">
-                <button class="remove-btn" data-action="remove-severity" data-gauge="${index}" data-item="${i}">×</button>
-              </div>
-            `).join('')}
-          </div>
-          <button class="add-btn" data-action="add-severity" data-gauge="${index}">${this._t('addThreshold')}</button>
-        </div>
-
-        <div class="sub-section">
-          <div class="sub-title">${this._t('markers')}</div>
-          <div class="row">
-            <div class="field">
-              <label>${this._t('markersRadius')}</label>
-              <input type="number" id="gauge${index}_markers_radius" value="${esc(gauge.markers_radius !== undefined ? gauge.markers_radius : '')}" placeholder="Auto" min="10" max="300" step="1">
-            </div>
-            <div class="field checkbox">
-              <input type="checkbox" id="gauge${index}_markers_inside" ${gauge.markers_inside !== false ? 'checked' : ''}>
-              <label for="gauge${index}_markers_inside">${this._t('markersInside')}</label>
-            </div>
-          </div>
-          <div class="markers-list" id="gauge${index}_markers_list">
-            ${markers.map((m, i) => `
-              <div class="marker-item" data-index="${i}">
-                <input type="number" value="${esc(m.value)}" placeholder="Value" data-field="value" step="any">
-                <input type="color" value="${esc(m.color || '#ffffff')}" data-field="color">
-                <input type="text" value="${esc(m.label || '')}" placeholder="Label" data-field="label">
-                <button class="remove-btn" data-action="remove-marker" data-gauge="${index}" data-item="${i}">×</button>
-              </div>
-            `).join('')}
-          </div>
-          <button class="add-btn" data-action="add-marker" data-gauge="${index}">${this._t('addMarker')}</button>
-        </div>
-
-        <div class="sub-section">
-          <div class="sub-title">${this._t('coloredZones')}</div>
-          <div class="zones-list" id="gauge${index}_zones_list">
-            ${zones.map((z, i) => `
-              <div class="zone-item" data-index="${i}">
-                <input type="number" value="${esc(z.from)}" placeholder="From" data-field="from" step="any">
-                <input type="number" value="${esc(z.to)}" placeholder="To" data-field="to" step="any">
-                <input type="color" value="${esc(z.color || '#2196f3')}" data-field="color">
-                <input type="number" value="${esc(z.opacity !== undefined ? z.opacity : 0.3)}" placeholder="Opacity" data-field="opacity" min="0" max="1" step="0.1">
-                <button class="remove-btn" data-action="remove-zone" data-gauge="${index}" data-item="${i}">×</button>
-              </div>
-            `).join('')}
-          </div>
-          <button class="add-btn" data-action="add-zone" data-gauge="${index}">${this._t('addZone')}</button>
-        </div>
-
-        <div class="sub-section">
-          <div class="sub-title">${this._t('valueUnitTypography')}</div>
-          
-          <div class="row">
-            <div class="field">
-              <label>${this._t('valueFont')}</label>
-              <input type="text" id="gauge${index}_value_font_family" value="${esc(gauge.value_font_family || '')}" placeholder="inherit">
-            </div>
-            <div class="field">
-              <label>${this._t('valueSize')}</label>
-              <input type="text" id="gauge${index}_value_font_size" value="${esc(gauge.value_font_size || '')}" placeholder="${index === 0 ? '24px' : '18px'}">
-            </div>
-            <div class="field">
-              <label>${this._t('valueWeight')}</label>
-              <select id="gauge${index}_value_font_weight">
-                <option value="" ${!gauge.value_font_weight ? 'selected' : ''}>${this._t('weightAuto')}</option>
-                <option value="normal" ${gauge.value_font_weight === 'normal' ? 'selected' : ''}>${this._t('weightNormal')}</option>
-                <option value="bold" ${gauge.value_font_weight === 'bold' ? 'selected' : ''}>${this._t('weightBold')}</option>
-                <option value="lighter" ${gauge.value_font_weight === 'lighter' ? 'selected' : ''}>${this._t('weightLight')}</option>
-                <option value="100" ${gauge.value_font_weight === '100' ? 'selected' : ''}>100</option>
-                <option value="200" ${gauge.value_font_weight === '200' ? 'selected' : ''}>200</option>
-                <option value="300" ${gauge.value_font_weight === '300' ? 'selected' : ''}>300</option>
-                <option value="400" ${gauge.value_font_weight === '400' ? 'selected' : ''}>400</option>
-                <option value="500" ${gauge.value_font_weight === '500' ? 'selected' : ''}>500</option>
-                <option value="600" ${gauge.value_font_weight === '600' ? 'selected' : ''}>600</option>
-                <option value="700" ${gauge.value_font_weight === '700' ? 'selected' : ''}>700</option>
-                <option value="800" ${gauge.value_font_weight === '800' ? 'selected' : ''}>800</option>
-                <option value="900" ${gauge.value_font_weight === '900' ? 'selected' : ''}>900</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="field">
-              <label>${this._t('valueColor')}</label>
-              <div class="color-row">
-                <input type="color" id="gauge${index}_value_font_color" value="${esc(gauge.value_font_color || '#ffffff')}" data-field="color">
-                <input type="text" id="gauge${index}_value_font_color_text" value="${esc(gauge.value_font_color || '')}" placeholder="Auto" data-field="color_text">
-              </div>
-            </div>
-            <div class="field">
-              <label>${this._t('unitFont')}</label>
-              <input type="text" id="gauge${index}_unit_font_family" value="${esc(gauge.unit_font_family || '')}" placeholder="inherit">
-            </div>
-            <div class="field">
-              <label>${this._t('unitSize')}</label>
-              <input type="text" id="gauge${index}_unit_font_size" value="${esc(gauge.unit_font_size || '')}" placeholder="${index === 0 ? '14px' : '12px'}">
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="field">
-              <label>${this._t('unitWeight')}</label>
-              <select id="gauge${index}_unit_font_weight">
-                <option value="" ${!gauge.unit_font_weight ? 'selected' : ''}>${this._t('weightAuto')}</option>
-                <option value="normal" ${gauge.unit_font_weight === 'normal' ? 'selected' : ''}>${this._t('weightNormal')}</option>
-                <option value="bold" ${gauge.unit_font_weight === 'bold' ? 'selected' : ''}>${this._t('weightBold')}</option>
-                <option value="lighter" ${gauge.unit_font_weight === 'lighter' ? 'selected' : ''}>${this._t('weightLight')}</option>
-                <option value="100" ${gauge.unit_font_weight === '100' ? 'selected' : ''}>100</option>
-                <option value="200" ${gauge.unit_font_weight === '200' ? 'selected' : ''}>200</option>
-                <option value="300" ${gauge.unit_font_weight === '300' ? 'selected' : ''}>300</option>
-                <option value="400" ${gauge.unit_font_weight === '400' ? 'selected' : ''}>400</option>
-                <option value="500" ${gauge.unit_font_weight === '500' ? 'selected' : ''}>500</option>
-                <option value="600" ${gauge.unit_font_weight === '600' ? 'selected' : ''}>600</option>
-                <option value="700" ${gauge.unit_font_weight === '700' ? 'selected' : ''}>700</option>
-                <option value="800" ${gauge.unit_font_weight === '800' ? 'selected' : ''}>800</option>
-                <option value="900" ${gauge.unit_font_weight === '900' ? 'selected' : ''}>900</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>${this._t('unitColor')}</label>
-              <div class="color-row">
-                <input type="color" id="gauge${index}_unit_font_color" value="${esc(gauge.unit_font_color || '#dddddd')}" data-field="color">
-                <input type="text" id="gauge${index}_unit_font_color_text" value="${esc(gauge.unit_font_color || '')}" placeholder="Auto" data-field="color_text">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  _attachListeners() {
-    // Standard inputs - use 'change' to avoid too frequent updates
-    const inputs = this.shadowRoot.querySelectorAll('input:not([type="color"]), select');
-    inputs.forEach(input => {
-      input.addEventListener('change', () => this._updateConfig());
+    this._forms.general = this._createForm(generalSchema(this._config), (value) => {
+      this._config = stripEmpty(value);
+      this._commit();
     });
+    content.appendChild(this._forms.general);
 
-    // Color pickers - real-time update of associated text
-    const colorPickers = this.shadowRoot.querySelectorAll('input[type="color"]');
-    colorPickers.forEach(picker => {
-      picker.addEventListener('input', (e) => {
-        // Update associated text field
-        const textInput = e.target.parentElement.querySelector('[data-field="color_text"]');
-        if (textInput) textInput.value = e.target.value;
-        this._updateConfig();
-      });
-    });
-
-    // Color texts
-    const colorTexts = this.shadowRoot.querySelectorAll('input[data-field="color_text"]');
-    colorTexts.forEach(text => {
-      text.addEventListener('change', (e) => {
-        // Update associated color picker
-        const picker = e.target.parentElement.querySelector('input[type="color"]');
-        if (picker && e.target.value.match(/^#[0-9a-fA-F]{6}$/)) {
-          picker.value = e.target.value;
-        }
-        this._updateConfig();
-      });
-    });
-
-    // Add/remove buttons
-    const buttons = this.shadowRoot.querySelectorAll('button[data-action]');
-    buttons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const action = e.target.dataset.action;
-        const gaugeIndex = parseInt(e.target.dataset.gauge);
-        const itemIndex = e.target.dataset.item !== undefined ? parseInt(e.target.dataset.item) : null;
-        this._handleListAction(action, gaugeIndex, itemIndex);
-      });
-    });
-
-    // Dynamic lists - numeric and text inputs
-    ['severity', 'markers', 'zones'].forEach(listType => {
-      [0, 1].forEach(gaugeIndex => {
-        const list = this.shadowRoot.getElementById(`gauge${gaugeIndex}_${listType}_list`);
-        if (list) {
-          const inputs = list.querySelectorAll('input:not([type="color"])');
-          inputs.forEach(input => {
-            input.addEventListener('change', () => this._updateConfig());
-          });
-        }
-      });
-    });
-
-    // Show/hide shadow options
     [0, 1].forEach(index => {
-      const centerShadow = this.shadowRoot.getElementById(`gauge${index}_center_shadow`);
-      const outerShadow = this.shadowRoot.getElementById(`gauge${index}_outer_shadow`);
-      if (centerShadow) {
-        centerShadow.addEventListener('change', () => {
-          const options = this.shadowRoot.getElementById(`gauge${index}_center_shadow_options`);
-          if (options) options.style.display = centerShadow.checked ? 'flex' : 'none';
-          this._updateConfig();
-        });
-      }
-      if (outerShadow) {
-        outerShadow.addEventListener('change', () => {
-          const options = this.shadowRoot.getElementById(`gauge${index}_outer_shadow_options`);
-          if (options) options.style.display = outerShadow.checked ? 'flex' : 'none';
-          this._updateConfig();
-        });
-      }
+      content.appendChild(this._buildGaugePanel(index));
     });
 
-    // Show/hide custom theme section
-    const cardTheme = this.shadowRoot.getElementById('card_theme');
-    if (cardTheme) {
-      cardTheme.addEventListener('change', () => {
-        const customSection = this.shadowRoot.getElementById('custom_theme_section');
-        if (customSection) {
-          customSection.style.display = cardTheme.value === 'custom' ? 'block' : 'none';
+    this._rendered = true;
+    this._applyConfig();
+  }
+
+  _createForm(schema, onChange) {
+    const form = createElement('ha-form', {
+      hass: this._hass,
+      schema,
+      computeLabel: this._computeLabel,
+      computeHelper: this._computeHelper
+    });
+
+    form.addEventListener('value-changed', (event) => {
+      event.stopPropagation();
+      onChange({ ...event.detail.value });
+    });
+
+    return form;
+  }
+
+  _buildGaugePanel(index) {
+    const panel = createElement('ha-expansion-panel', {
+      header: index === 0 ? TEXTS.innerGauge : TEXTS.outerGauge,
+      outlined: true
+    });
+
+    const body = createElement('div', { className: 'panel-content' });
+
+    const form = this._createForm(gaugeSchema(this._gauge(index)), (value) => {
+      this._updateGauge(index, stripEmpty(value));
+    });
+    this._forms[`gauge${index}`] = form;
+    body.appendChild(form);
+
+    body.appendChild(this._buildSeverityPanel(index));
+    body.appendChild(this._buildMarkersPanel(index));
+    body.appendChild(this._buildZonesPanel(index));
+
+    panel.appendChild(body);
+    return panel;
+  }
+
+  _buildListPanel(header, helperText, emptyText, addLabel, onAdd) {
+    const panel = createElement('ha-expansion-panel', { header, outlined: true });
+
+    const body = createElement('div', { className: 'panel-content' });
+
+    if (helperText) {
+      body.appendChild(createElement('div', { className: 'helper', textContent: helperText }));
+    }
+
+    const list = createElement('div', { className: 'list' });
+    body.appendChild(list);
+
+    body.appendChild(createElement('div', { className: 'empty', textContent: emptyText }));
+
+    const actions = createElement('div', { className: 'actions' });
+    const addButton = createElement(buttonTag(), { textContent: addLabel });
+    addButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onAdd();
+    });
+    actions.appendChild(addButton);
+    body.appendChild(actions);
+
+    panel.appendChild(body);
+    panel._list = list;
+    panel._empty = body.querySelector('.empty');
+    return panel;
+  }
+
+  _buildSeverityPanel(index) {
+    const panel = this._buildListPanel(
+      TEXTS.severity,
+      TEXTS.severityHelp,
+      TEXTS.emptySeverity,
+      TEXTS.addThreshold,
+      () => this._addItem(index, 'severity', { color: '#4caf50', value: 0 })
+    );
+    this._lists[`severity${index}`] = panel;
+    return panel;
+  }
+
+  _buildMarkersPanel(index) {
+    const panel = this._buildListPanel(
+      TEXTS.markers,
+      null,
+      TEXTS.emptyMarkers,
+      TEXTS.addMarker,
+      () => this._addItem(index, 'markers', { value: 0, color: '#ffffff', label: '' })
+    );
+
+    // Markers have gauge-level options on top of the list itself
+    const optionsForm = this._createForm(MARKERS_OPTIONS_SCHEMA, (value) => {
+      this._updateGauge(index, stripEmpty({ ...this._gauge(index), ...value }));
+    });
+    this._forms[`markersOptions${index}`] = optionsForm;
+    panel._list.parentElement.insertBefore(optionsForm, panel._list);
+
+    this._lists[`markers${index}`] = panel;
+    return panel;
+  }
+
+  _buildZonesPanel(index) {
+    const panel = this._buildListPanel(
+      TEXTS.zones,
+      null,
+      TEXTS.emptyZones,
+      TEXTS.addZone,
+      () => this._addItem(index, 'zones', { from: 0, to: 25, color: '#2196f3', opacity: 0.3 })
+    );
+    this._lists[`zones${index}`] = panel;
+    return panel;
+  }
+
+  // --------------------------------------------------------------------------
+  // List rows
+  // --------------------------------------------------------------------------
+
+  /**
+   * `ha-textfield` mirrors the native input events, and Home Assistant listens to both
+   * `input` and `change` on it. Dedupe so a blur right after typing does not fire twice.
+   */
+  _dedupe(initialValue, onChange) {
+    let last = initialValue;
+
+    const commit = (value) => {
+      if (value === last) return;
+      last = value;
+      onChange(value);
+    };
+
+    return commit;
+  }
+
+  _colorField(item, onChange) {
+    const isHex = (value) => /^#[0-9a-fA-F]{6}$/.test(value || '');
+
+    const swatch = createElement('input', { type: 'color', className: 'swatch' });
+    swatch.value = isHex(item.color) ? item.color : '#ffffff';
+
+    const field = createElement('ha-textfield', {
+      label: TEXTS.color,
+      value: item.color || ''
+    });
+
+    const commit = this._dedupe(item.color || '', onChange);
+
+    // `change` rather than `input`: the picker fires continuously while dragging and each
+    // event rebuilds the card preview
+    swatch.addEventListener('change', () => {
+      field.value = swatch.value;
+      commit(swatch.value);
+    });
+
+    ['input', 'change'].forEach(eventName => {
+      field.addEventListener(eventName, () => {
+        if (isHex(field.value)) {
+          swatch.value = field.value;
         }
-        this._updateConfig();
+        commit(field.value);
       });
-    }
+    });
+
+    return [swatch, field];
   }
 
-  _handleListAction(action, gaugeIndex, itemIndex) {
-    // First, save current input state
-    this._saveCurrentState();
+  _numberField(label, value, onChange, options = {}) {
+    const field = createElement('ha-textfield', {
+      label,
+      className: 'narrow',
+      type: 'number',
+      value: value !== undefined && value !== null ? String(value) : '',
+      ...options
+    });
 
-    // Clone config to avoid modifying original
-    this._config = JSON.parse(JSON.stringify(this._config));
-    
-    if (!this._config.gauges) this._config.gauges = [{}, {}];
-    if (!this._config.gauges[gaugeIndex]) this._config.gauges[gaugeIndex] = {};
+    const commit = this._dedupe(value, onChange);
 
-    switch (action) {
-      case 'add-severity':
-        if (!this._config.gauges[gaugeIndex].severity) {
-          this._config.gauges[gaugeIndex].severity = [];
-        }
-        this._config.gauges[gaugeIndex].severity.push({ color: '#4caf50', value: 0 });
-        break;
-      case 'remove-severity':
-        if (this._config.gauges[gaugeIndex].severity) {
-          this._config.gauges[gaugeIndex].severity.splice(itemIndex, 1);
-        }
-        break;
-      case 'add-marker':
-        if (!this._config.gauges[gaugeIndex].markers) {
-          this._config.gauges[gaugeIndex].markers = [];
-        }
-        this._config.gauges[gaugeIndex].markers.push({ value: 0, color: '#ffffff', label: '' });
-        break;
-      case 'remove-marker':
-        if (this._config.gauges[gaugeIndex].markers) {
-          this._config.gauges[gaugeIndex].markers.splice(itemIndex, 1);
-        }
-        break;
-      case 'add-zone':
-        if (!this._config.gauges[gaugeIndex].zones) {
-          this._config.gauges[gaugeIndex].zones = [];
-        }
-        this._config.gauges[gaugeIndex].zones.push({ from: 0, to: 25, color: '#2196f3', opacity: 0.3 });
-        break;
-      case 'remove-zone':
-        if (this._config.gauges[gaugeIndex].zones) {
-          this._config.gauges[gaugeIndex].zones.splice(itemIndex, 1);
-        }
-        break;
+    // While typing, ignore the states a number goes through ('', '-', '1e'); on blur,
+    // an unreadable field falls back to 0
+    field.addEventListener('input', () => {
+      const parsed = parseFloat(field.value);
+      if (Number.isFinite(parsed)) commit(parsed);
+    });
+
+    field.addEventListener('change', () => {
+      const parsed = parseFloat(field.value);
+      commit(Number.isFinite(parsed) ? parsed : 0);
+    });
+
+    return field;
+  }
+
+  _textField(label, value, onChange) {
+    const field = createElement('ha-textfield', { label, value: value || '' });
+    const commit = this._dedupe(value || '', onChange);
+
+    ['input', 'change'].forEach(eventName => {
+      field.addEventListener(eventName, () => commit(field.value));
+    });
+
+    return field;
+  }
+
+  _removeButton(onRemove) {
+    const button = createElement('ha-icon-button', { label: TEXTS.remove });
+    button.appendChild(createElement('ha-icon', { icon: 'mdi:close' }));
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onRemove();
+    });
+    return button;
+  }
+
+  _buildRow(index, listName, item, itemIndex) {
+    const row = createElement('div', { className: 'list-row' });
+    const patch = (changes) => this._updateItem(index, listName, itemIndex, changes);
+
+    if (listName === 'severity') {
+      row.append(...this._colorField(item, (color) => patch({ color })));
+      row.appendChild(this._numberField(TEXTS.value, item.value, (value) => patch({ value }), { step: 'any' }));
+    } else if (listName === 'markers') {
+      row.appendChild(this._numberField(TEXTS.value, item.value, (value) => patch({ value }), { step: 'any' }));
+      row.append(...this._colorField(item, (color) => patch({ color })));
+      row.appendChild(this._textField(TEXTS.label, item.label, (label) => patch({ label })));
+    } else {
+      row.appendChild(this._numberField(TEXTS.from, item.from, (from) => patch({ from }), { step: 'any' }));
+      row.appendChild(this._numberField(TEXTS.to, item.to, (to) => patch({ to }), { step: 'any' }));
+      row.append(...this._colorField(item, (color) => patch({ color })));
+      row.appendChild(this._numberField(TEXTS.opacity, item.opacity, (opacity) => patch({ opacity }), {
+        step: '0.1',
+        min: '0',
+        max: '1'
+      }));
     }
 
-    this._render();
+    row.appendChild(this._removeButton(() => this._removeItem(index, listName, itemIndex)));
+    return row;
+  }
+
+  _renderList(index, listName) {
+    const panel = this._lists[`${listName}${index}`];
+    if (!panel) return;
+
+    const items = this._gauge(index)[listName] || [];
+
+    // Rebuild the rows only when items are added or removed. Editing a field already
+    // updates the DOM the user is typing in, recreating it would steal the focus.
+    if (panel._itemCount === items.length) return;
+    panel._itemCount = items.length;
+
+    panel._list.innerHTML = '';
+    items.forEach((item, itemIndex) => {
+      panel._list.appendChild(this._buildRow(index, listName, item, itemIndex));
+    });
+
+    panel._empty.style.display = items.length ? 'none' : '';
+  }
+
+  // --------------------------------------------------------------------------
+  // Configuration updates
+  // --------------------------------------------------------------------------
+
+  _gauge(index) {
+    return this._config?.gauges?.[index] || {};
+  }
+
+  _updateGauge(index, gauge) {
+    const gauges = [...(this._config.gauges || [{}, {}])];
+    gauges[index] = gauge;
+    this._config = { ...this._config, gauges };
+    this._commit();
+  }
+
+  _addItem(index, listName, item) {
+    const gauge = this._gauge(index);
+    this._updateGauge(index, { ...gauge, [listName]: [...(gauge[listName] || []), item] });
+  }
+
+  _removeItem(index, listName, itemIndex) {
+    const gauge = this._gauge(index);
+    const list = [...(gauge[listName] || [])];
+    list.splice(itemIndex, 1);
+
+    const updated = { ...gauge, [listName]: list };
+    if (!list.length) {
+      delete updated[listName];
+    }
+
+    this._updateGauge(index, updated);
+  }
+
+  _updateItem(index, listName, itemIndex, changes) {
+    const gauge = this._gauge(index);
+    const list = [...(gauge[listName] || [])];
+    if (!list[itemIndex]) return;
+
+    list[itemIndex] = { ...list[itemIndex], ...changes };
+    this._updateGauge(index, { ...gauge, [listName]: list });
+  }
+
+  _applyConfig() {
+    const config = this._config;
+
+    this._forms.general.hass = this._hass;
+    this._forms.general.schema = generalSchema(config);
+    this._forms.general.data = config;
+
+    [0, 1].forEach(index => {
+      const gauge = this._gauge(index);
+
+      const data = withGaugeDefaults(gauge);
+
+      const form = this._forms[`gauge${index}`];
+      form.hass = this._hass;
+      form.schema = gaugeSchema(gauge);
+      form.data = data;
+
+      const markersOptions = this._forms[`markersOptions${index}`];
+      markersOptions.hass = this._hass;
+      markersOptions.data = data;
+
+      this._renderList(index, 'severity');
+      this._renderList(index, 'markers');
+      this._renderList(index, 'zones');
+    });
+  }
+
+  _commit() {
+    this._applyConfig();
     this._fireConfigChanged();
-  }
-
-  _saveCurrentState() {
-    // Clone config before modification (in case it's still frozen)
-    if (this._config) {
-      this._config = JSON.parse(JSON.stringify(this._config));
-    }
-    
-    // Quick save of current values in config
-    const getInputValue = (id) => {
-      const el = this.shadowRoot.getElementById(id);
-      if (!el) return undefined;
-      if (el.type === 'checkbox') return el.checked;
-      if (el.type === 'number') {
-        const val = parseFloat(el.value);
-        return isNaN(val) ? undefined : val;
-      }
-      return el.value;
-    };
-
-    // Save general values
-    this._config.name = getInputValue('name') ?? this._config.name ?? '';
-    this._config.gauge_size = getInputValue('gauge_size') ?? this._config.gauge_size ?? 200;
-    this._config.inner_gauge_size = getInputValue('inner_gauge_size') ?? this._config.inner_gauge_size ?? 130;
-    this._config.inner_gauge_radius = getInputValue('inner_gauge_radius') ?? this._config.inner_gauge_radius ?? 65;
-    this._config.title_position = getInputValue('title_position') ?? this._config.title_position ?? 'bottom';
-    this._config.card_theme = getInputValue('card_theme') ?? this._config.card_theme ?? 'default';
-    this._config.hide_card = getInputValue('hide_card') ?? this._config.hide_card ?? false;
-    this._config.power_save_mode = getInputValue('power_save_mode') ?? this._config.power_save_mode ?? false;
-    this._config.debounce_updates = getInputValue('debounce_updates') ?? this._config.debounce_updates ?? false;
-    this._config.hide_shadows = getInputValue('hide_shadows') ?? this._config.hide_shadows ?? false;
-    this._config.update_interval = getInputValue('update_interval') ?? this._config.update_interval ?? 1000;
-
-    // Save custom theme settings
-    this._config.custom_background = getInputValue('custom_background_text') ?? this._config.custom_background ?? '';
-    this._config.custom_gauge_background = getInputValue('custom_gauge_background_text') ?? this._config.custom_gauge_background ?? '';
-    this._config.custom_center_background = getInputValue('custom_center_background_text') ?? this._config.custom_center_background ?? '';
-    this._config.custom_text_color = getInputValue('custom_text_color_text') ?? this._config.custom_text_color ?? '';
-    this._config.custom_secondary_text_color = getInputValue('custom_secondary_text_color_text') ?? this._config.custom_secondary_text_color ?? '';
-
-    // Save title typography settings
-    this._config.title_font_size = getInputValue('title_font_size') ?? this._config.title_font_size ?? '';
-    this._config.title_font_family = getInputValue('title_font_family') ?? this._config.title_font_family ?? '';
-    this._config.title_font_weight = getInputValue('title_font_weight') ?? this._config.title_font_weight ?? '';
-    this._config.title_font_color = getInputValue('title_font_color_text') ?? this._config.title_font_color ?? '';
-    this._config.card_background = getInputValue('card_background') ?? this._config.card_background ?? '';
-
-    // Save transparency options
-    this._config.transparent_card_background = getInputValue('transparent_card_background') ?? this._config.transparent_card_background ?? false;
-    this._config.transparent_gauge_background = getInputValue('transparent_gauge_background') ?? this._config.transparent_gauge_background ?? false;
-    this._config.transparent_center_background = getInputValue('transparent_center_background') ?? this._config.transparent_center_background ?? false;
-
-    // Save gauge values
-    for (let i = 0; i < 2; i++) {
-      if (!this._config.gauges) this._config.gauges = [{}, {}];
-      if (!this._config.gauges[i]) this._config.gauges[i] = {};
-
-      this._config.gauges[i].entity = getInputValue(`gauge${i}_entity`) ?? this._config.gauges[i].entity ?? '';
-      this._config.gauges[i].min = getInputValue(`gauge${i}_min`) ?? this._config.gauges[i].min ?? 0;
-      this._config.gauges[i].max = getInputValue(`gauge${i}_max`) ?? this._config.gauges[i].max ?? 100;
-      this._config.gauges[i].unit = getInputValue(`gauge${i}_unit`) ?? this._config.gauges[i].unit ?? '';
-      this._config.gauges[i].decimals = getInputValue(`gauge${i}_decimals`) ?? this._config.gauges[i].decimals ?? 1;
-      this._config.gauges[i].leds_count = getInputValue(`gauge${i}_leds_count`) ?? this._config.gauges[i].leds_count ?? (i === 0 ? 80 : 100);
-      this._config.gauges[i].led_size = getInputValue(`gauge${i}_led_size`) ?? this._config.gauges[i].led_size ?? (i === 0 ? 6 : 8);
-      this._config.gauges[i].start_angle = getInputValue(`gauge${i}_start_angle`) ?? this._config.gauges[i].start_angle ?? 0;
-      this._config.gauges[i].arc_length = getInputValue(`gauge${i}_arc_length`) ?? this._config.gauges[i].arc_length ?? 360;
-      this._config.gauges[i].markers_radius = getInputValue(`gauge${i}_markers_radius`) ?? this._config.gauges[i].markers_radius ?? undefined;
-      this._config.gauges[i].markers_inside = getInputValue(`gauge${i}_markers_inside`) ?? this._config.gauges[i].markers_inside ?? true;
-      this._config.gauges[i].theme = getInputValue(`gauge${i}_theme`) ?? this._config.gauges[i].theme ?? 'default';
-      this._config.gauges[i].animation_duration = getInputValue(`gauge${i}_animation_duration`) ?? this._config.gauges[i].animation_duration ?? 800;
-      this._config.gauges[i].bidirectional = getInputValue(`gauge${i}_bidirectional`) ?? this._config.gauges[i].bidirectional ?? false;
-      this._config.gauges[i].hide_inactive_leds = getInputValue(`gauge${i}_hide_inactive_leds`) ?? this._config.gauges[i].hide_inactive_leds ?? false;
-      this._config.gauges[i].smooth_transitions = getInputValue(`gauge${i}_smooth_transitions`) ?? this._config.gauges[i].smooth_transitions ?? true;
-      this._config.gauges[i].center_shadow = getInputValue(`gauge${i}_center_shadow`) ?? this._config.gauges[i].center_shadow ?? false;
-      this._config.gauges[i].outer_shadow = getInputValue(`gauge${i}_outer_shadow`) ?? this._config.gauges[i].outer_shadow ?? false;
-
-      // Save value and unit fonts
-      this._config.gauges[i].value_font_family = getInputValue(`gauge${i}_value_font_family`) ?? this._config.gauges[i].value_font_family ?? '';
-      this._config.gauges[i].value_font_size = getInputValue(`gauge${i}_value_font_size`) ?? this._config.gauges[i].value_font_size ?? '';
-      this._config.gauges[i].value_font_weight = getInputValue(`gauge${i}_value_font_weight`) ?? this._config.gauges[i].value_font_weight ?? '';
-      this._config.gauges[i].value_font_color = getInputValue(`gauge${i}_value_font_color_text`) ?? this._config.gauges[i].value_font_color ?? '';
-      this._config.gauges[i].unit_font_family = getInputValue(`gauge${i}_unit_font_family`) ?? this._config.gauges[i].unit_font_family ?? '';
-      this._config.gauges[i].unit_font_size = getInputValue(`gauge${i}_unit_font_size`) ?? this._config.gauges[i].unit_font_size ?? '';
-      this._config.gauges[i].unit_font_weight = getInputValue(`gauge${i}_unit_font_weight`) ?? this._config.gauges[i].unit_font_weight ?? '';
-      this._config.gauges[i].unit_font_color = getInputValue(`gauge${i}_unit_font_color_text`) ?? this._config.gauges[i].unit_font_color ?? '';
-
-      // Save current dynamic lists
-      ['severity', 'markers', 'zones'].forEach(listType => {
-        const list = this.shadowRoot.getElementById(`gauge${i}_${listType}_list`);
-        if (list) {
-          const items = list.querySelectorAll(`.${listType === 'severity' ? 'severity-item' : listType === 'markers' ? 'marker-item' : 'zone-item'}`);
-          if (listType === 'severity') {
-            this._config.gauges[i].severity = Array.from(items).map(item => ({
-              color: item.querySelector('[data-field="color"]').value,
-              value: parseFloat(item.querySelector('[data-field="value"]').value) || 0
-            }));
-          } else if (listType === 'markers') {
-            this._config.gauges[i].markers = Array.from(items).map(item => ({
-              value: parseFloat(item.querySelector('[data-field="value"]').value) || 0,
-              color: item.querySelector('[data-field="color"]').value,
-              label: item.querySelector('[data-field="label"]').value
-            }));
-          } else if (listType === 'zones') {
-            this._config.gauges[i].zones = Array.from(items).map(item => ({
-              from: parseFloat(item.querySelector('[data-field="from"]').value) || 0,
-              to: parseFloat(item.querySelector('[data-field="to"]').value) || 0,
-              color: item.querySelector('[data-field="color"]').value,
-              opacity: parseFloat(item.querySelector('[data-field="opacity"]').value) || 0.3
-            }));
-          }
-        }
-      });
-    }
-  }
-
-  _updateConfig() {
-    const getValue = (id) => {
-      const el = this.shadowRoot.getElementById(id);
-      if (!el) return undefined;
-      if (el.type === 'checkbox') return el.checked;
-      if (el.type === 'number') {
-        const val = parseFloat(el.value);
-        return isNaN(val) ? undefined : val;
-      }
-      return el.value;
-    };
-
-    // Spread the previous config first so keys the editor does not manage (view_layout,
-    // grid_options, visibility, ...) survive a round-trip through the visual editor.
-    const newConfig = {
-      ...this._config,
-      type: 'custom:dual-gauge-card',
-      name: getValue('name') || '',
-      gauge_size: getValue('gauge_size') || 200,
-      inner_gauge_size: getValue('inner_gauge_size') || 130,
-      inner_gauge_radius: getValue('inner_gauge_radius') || 65,
-      title_position: getValue('title_position') || 'bottom',
-      card_theme: getValue('card_theme') || 'default',
-      hide_card: getValue('hide_card') || false,
-      power_save_mode: getValue('power_save_mode') || false,
-      debounce_updates: getValue('debounce_updates') || false,
-      hide_shadows: getValue('hide_shadows') || false,
-      update_interval: getValue('update_interval') || 1000,
-      gauges: [0, 1].map(idx => this._getGaugeConfig(idx))
-    };
-
-    // Optional parameters: keep them out of the YAML when the field is empty, and drop any
-    // previous value so clearing a field in the editor really clears it
-    const setOptional = (key, value) => {
-      if (value) {
-        newConfig[key] = value;
-      } else {
-        delete newConfig[key];
-      }
-    };
-
-    setOptional('custom_background', getValue('custom_background_text'));
-    setOptional('custom_gauge_background', getValue('custom_gauge_background_text'));
-    setOptional('custom_center_background', getValue('custom_center_background_text'));
-    setOptional('custom_text_color', getValue('custom_text_color_text'));
-    setOptional('custom_secondary_text_color', getValue('custom_secondary_text_color_text'));
-
-    // Title typography
-    setOptional('title_font_size', getValue('title_font_size'));
-    setOptional('title_font_family', getValue('title_font_family'));
-    setOptional('title_font_weight', getValue('title_font_weight'));
-    setOptional('title_font_color', getValue('title_font_color_text'));
-    setOptional('card_background', getValue('card_background'));
-
-    // Transparency
-    setOptional('transparent_card_background', getValue('transparent_card_background'));
-    setOptional('transparent_gauge_background', getValue('transparent_gauge_background'));
-    setOptional('transparent_center_background', getValue('transparent_center_background'));
-
-    this._config = newConfig;
-    this._fireConfigChanged();
-  }
-
-  _getGaugeConfig(index) {
-    const getValue = (id) => {
-      const el = this.shadowRoot.getElementById(id);
-      if (!el) return undefined;
-      if (el.type === 'checkbox') return el.checked;
-      if (el.type === 'number') {
-        const val = parseFloat(el.value);
-        return isNaN(val) ? undefined : val;
-      }
-      return el.value;
-    };
-
-    // Keep per-gauge keys the editor does not manage (custom theme colors, tap actions, ...)
-    const config = {
-      ...(this._config?.gauges?.[index] || {}),
-      entity: getValue(`gauge${index}_entity`) || '',
-      min: getValue(`gauge${index}_min`) !== undefined ? getValue(`gauge${index}_min`) : 0,
-      max: getValue(`gauge${index}_max`) !== undefined ? getValue(`gauge${index}_max`) : 100,
-      unit: getValue(`gauge${index}_unit`) || '',
-      decimals: getValue(`gauge${index}_decimals`) !== undefined ? getValue(`gauge${index}_decimals`) : 1,
-      leds_count: getValue(`gauge${index}_leds_count`) !== undefined ? getValue(`gauge${index}_leds_count`) : (index === 0 ? 80 : 100),
-      led_size: getValue(`gauge${index}_led_size`) !== undefined ? getValue(`gauge${index}_led_size`) : (index === 0 ? 6 : 8),
-      start_angle: getValue(`gauge${index}_start_angle`) !== undefined ? getValue(`gauge${index}_start_angle`) : 0,
-      arc_length: getValue(`gauge${index}_arc_length`) !== undefined ? getValue(`gauge${index}_arc_length`) : 360,
-      markers_radius: getValue(`gauge${index}_markers_radius`) !== undefined ? getValue(`gauge${index}_markers_radius`) : undefined,
-      markers_inside: getValue(`gauge${index}_markers_inside`) !== false,
-      theme: getValue(`gauge${index}_theme`) || 'default',
-      animation_duration: getValue(`gauge${index}_animation_duration`) !== undefined ? getValue(`gauge${index}_animation_duration`) : 800,
-      bidirectional: getValue(`gauge${index}_bidirectional`) || false,
-      hide_inactive_leds: getValue(`gauge${index}_hide_inactive_leds`) || false,
-      smooth_transitions: getValue(`gauge${index}_smooth_transitions`) !== false,
-      center_shadow: getValue(`gauge${index}_center_shadow`) || false,
-      center_shadow_blur: getValue(`gauge${index}_center_shadow_blur`) || 30,
-      center_shadow_spread: getValue(`gauge${index}_center_shadow_spread`) || 15,
-      outer_shadow: getValue(`gauge${index}_outer_shadow`) || false,
-      outer_shadow_blur: getValue(`gauge${index}_outer_shadow_blur`) || 30,
-      outer_shadow_spread: getValue(`gauge${index}_outer_shadow_spread`) || 15
-    };
-
-    // markers_radius is optional: an empty field means "auto"
-    if (config.markers_radius === undefined) {
-      delete config.markers_radius;
-    }
-
-    // Get severity thresholds
-    const severityList = this.shadowRoot.getElementById(`gauge${index}_severity_list`);
-    if (severityList) {
-      const items = severityList.querySelectorAll('.severity-item');
-      config.severity = Array.from(items).map(item => ({
-        color: item.querySelector('[data-field="color"]').value,
-        value: parseFloat(item.querySelector('[data-field="value"]').value) || 0
-      }));
-    }
-
-    // Get markers
-    const markersList = this.shadowRoot.getElementById(`gauge${index}_markers_list`);
-    if (markersList) {
-      const items = markersList.querySelectorAll('.marker-item');
-      config.markers = Array.from(items).map(item => ({
-        value: parseFloat(item.querySelector('[data-field="value"]').value) || 0,
-        color: item.querySelector('[data-field="color"]').value,
-        label: item.querySelector('[data-field="label"]').value
-      }));
-    }
-
-    // Get zones
-    const zonesList = this.shadowRoot.getElementById(`gauge${index}_zones_list`);
-    if (zonesList) {
-      const items = zonesList.querySelectorAll('.zone-item');
-      config.zones = Array.from(items).map(item => ({
-        from: parseFloat(item.querySelector('[data-field="from"]').value) || 0,
-        to: parseFloat(item.querySelector('[data-field="to"]').value) || 0,
-        color: item.querySelector('[data-field="color"]').value,
-        opacity: parseFloat(item.querySelector('[data-field="opacity"]').value) || 0.3
-      }));
-    }
-
-    // Get value and unit fonts
-    // Always include these properties to prevent them from disappearing
-    const valueFontFamily = getValue(`gauge${index}_value_font_family`);
-    config.value_font_family = valueFontFamily ?? '';
-    
-    const valueFontSize = getValue(`gauge${index}_value_font_size`);
-    config.value_font_size = valueFontSize ?? '';
-    
-    const valueFontWeight = getValue(`gauge${index}_value_font_weight`);
-    config.value_font_weight = valueFontWeight ?? '';
-    
-    const valueFontColor = getValue(`gauge${index}_value_font_color_text`);
-    config.value_font_color = valueFontColor ?? '';
-    
-    const unitFontFamily = getValue(`gauge${index}_unit_font_family`);
-    config.unit_font_family = unitFontFamily ?? '';
-    
-    const unitFontSize = getValue(`gauge${index}_unit_font_size`);
-    config.unit_font_size = unitFontSize ?? '';
-    
-    const unitFontWeight = getValue(`gauge${index}_unit_font_weight`);
-    config.unit_font_weight = unitFontWeight ?? '';
-    
-    const unitFontColor = getValue(`gauge${index}_unit_font_color_text`);
-    config.unit_font_color = unitFontColor ?? '';
-
-    return config;
   }
 
   _fireConfigChanged() {

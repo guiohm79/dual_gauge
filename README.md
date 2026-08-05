@@ -115,6 +115,17 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 
 ## Configuration
 
+### Visual Editor
+
+The card ships with a visual editor: add the card to a dashboard and every option below is
+available in the UI, no YAML required. The editor is built on the Home Assistant form
+components (`ha-form`, `ha-expansion-panel`, entity picker), so it follows your theme and
+behaves like the built-in card editors.
+
+It only writes the options you actually change — anything left empty keeps its default and
+stays out of your YAML — and it preserves the keys it does not manage (`view_layout`,
+`grid_options`, `visibility`, ...), so you can freely mix YAML and UI editing.
+
 ### Basic Structure
 
 ```yaml
