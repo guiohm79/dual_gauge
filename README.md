@@ -334,7 +334,14 @@ gauges:
         value: 75           # Above 50
 ```
 
+Each threshold gives the color used **up to its value**, and the highest threshold also
+colors everything above it. In the example above: green up to 20, orange from 20 to 50, red
+from 50 upwards.
+
 **Note:** Severity values are **real values** (not percentages). For a temperature sensor with min: 0, max: 40, use real temperature values like 20, 30, 35.
+
+**Note:** Thresholds are applied from the lowest value to the highest, whatever the order you
+write them in. A threshold listed out of order still works.
 
 #### Markers
 

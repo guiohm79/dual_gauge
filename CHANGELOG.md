@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-08-05
+
+### Fixed
+- 🐛 **A severity color could be ignored and the gauge stayed on the previous color**: the
+  thresholds were read in the order of the list, so the first one whose value was reached
+  answered, and a threshold placed after one of a higher value never applied. Adding a
+  threshold from the editor produced exactly that, since a new threshold was created with
+  the value 0 at the end of the list: the color picked never showed up and the gauge kept
+  the color of the first threshold. Thresholds are now applied from the lowest value to the
+  highest whatever their order in the configuration, which also fixes the configurations
+  written by hand in YAML.
+- 🐛 A threshold added from the visual editor now takes the top of the gauge range instead of
+  the value 0, so the chosen color is visible right away
+
+### Changed
+- 📖 The severity help text in the editor and in the README now states that a threshold
+  gives the color used up to its value, and that the highest one colors everything above it
+
+## [1.5.1] - 2026-08-05
+
+### Fixed
+- 🐛 **Severity, markers and zones rows were unusable in the visual editor**: only the color
+  swatch and the remove button showed up, the value, label, from, to and opacity fields were
+  blank. These rows were the last place where the editor instantiated a `ha-textfield`
+  itself, and that component is loaded on demand by Home Assistant, so it was not available
+  yet when the rows were built. The rows are now rendered by `ha-form` like the rest of the
+  editor, which takes care of loading its own selectors.
+  - Clearing a field of a row now removes the key from the item
+  - Row columns are narrower than the `ha-form` default so a row stays on a single line in
+    the edit dialog
+
 ## [1.5.0] - 2026-08-03
 
 ### Changed
