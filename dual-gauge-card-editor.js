@@ -1,14 +1,14 @@
 /**
  * Dual Gauge Card Editor - Visual Configuration Editor
- * Version: 1.5.0
+ * Version: 1.5.1
  *
  * This file is dynamically loaded by dual-gauge-card.js
  * when the user opens the visual editor.
  *
- * The editor is built on the Home Assistant form stack (`ha-form`,
- * `ha-expansion-panel`, `ha-textfield`, `ha-icon-button`), so it inherits the theme,
- * the widgets and the behaviour of the built-in card editors instead of reimplementing
- * a form with raw HTML inputs.
+ * Every field is rendered by `ha-form` from a schema, inside `ha-expansion-panel` sections,
+ * so the editor inherits the theme, the widgets and the behaviour of the built-in card
+ * editors. `ha-form` is also the component that loads its selectors on demand, which is why
+ * the editor never instantiates a form control by itself.
  */
 
 // ============================================================================
@@ -85,7 +85,15 @@ const LABELS = {
 
   // Markers
   markers_radius: 'Markers radius',
-  markers_inside: 'Labels inside'
+  markers_inside: 'Labels inside',
+
+  // Severity, markers and zones rows
+  color: 'Color',
+  value: 'Value',
+  label: 'Label',
+  from: 'From',
+  to: 'To',
+  opacity: 'Opacity'
 };
 
 const HELPERS = {
@@ -117,12 +125,6 @@ const TEXTS = {
   addMarker: 'Add marker',
   addZone: 'Add zone',
   remove: 'Remove',
-  color: 'Color',
-  value: 'Value',
-  label: 'Label',
-  from: 'From',
-  to: 'To',
-  opacity: 'Opacity',
   emptySeverity: 'No threshold defined, the default colors are used.',
   emptyMarkers: 'No marker defined.',
   emptyZones: 'No zone defined.'
@@ -293,9 +295,41 @@ const MARKERS_OPTIONS_SCHEMA = [
   ])
 ];
 
+// One row of the severity / markers / zones lists. The colour is a free text field because
+// the card also accepts gradients and named colours; a native swatch sits next to the form.
+// The columns are narrower than the 200px default so a row stays on a single line in the
+// edit dialog.
+const rowGrid = (schema) => [{ name: '', type: 'grid', column_min_width: '110px', schema }];
+
+const ROW_SCHEMAS = {
+  severity: rowGrid([
+    { name: 'color', ...text() },
+    { name: 'value', ...num({ step: 'any' }) }
+  ]),
+  markers: rowGrid([
+    { name: 'value', ...num({ step: 'any' }) },
+    { name: 'color', ...text() },
+    { name: 'label', ...text() }
+  ]),
+  zones: rowGrid([
+    { name: 'from', ...num({ step: 'any' }) },
+    { name: 'to', ...num({ step: 'any' }) },
+    { name: 'color', ...text() },
+    { name: 'opacity', ...num({ min: 0, max: 1, step: 0.1 }) }
+  ])
+};
+
 // ============================================================================
 // UTILITIES
 // ============================================================================
+
+/**
+ * @param {*} value - Any configuration value
+ * @returns {boolean} True when the value is a 6 digit hex colour a native picker can show
+ */
+function isHexColor(value) {
+  return /^#[0-9a-fA-F]{6}$/.test(value || '');
+}
 
 /**
  * Remove the keys Home Assistant should not store: an empty field means "use the default",
@@ -477,12 +511,9 @@ class DualGaugeCardEditor extends HTMLElement {
           align-items: center;
           gap: 8px;
         }
-        .list-row ha-textfield {
+        .list-row .row-form {
           flex: 1;
           min-width: 0;
-        }
-        .list-row ha-textfield.narrow {
-          flex: 0 1 90px;
         }
         .swatch {
           flex: 0 0 auto;
@@ -634,88 +665,19 @@ class DualGaugeCardEditor extends HTMLElement {
   // --------------------------------------------------------------------------
 
   /**
-   * `ha-textfield` mirrors the native input events, and Home Assistant listens to both
-   * `input` and `change` on it. Dedupe so a blur right after typing does not fire twice.
+   * Colour swatch shown next to the row form. `ha-form` has no selector able to hold an
+   * arbitrary CSS colour (the card also accepts gradients and named colours), so the hex
+   * picker stays a native input and writes into the same `color` field.
    */
-  _dedupe(initialValue, onChange) {
-    let last = initialValue;
-
-    const commit = (value) => {
-      if (value === last) return;
-      last = value;
-      onChange(value);
-    };
-
-    return commit;
-  }
-
-  _colorField(item, onChange) {
-    const isHex = (value) => /^#[0-9a-fA-F]{6}$/.test(value || '');
-
+  _colorSwatch(color, onChange) {
     const swatch = createElement('input', { type: 'color', className: 'swatch' });
-    swatch.value = isHex(item.color) ? item.color : '#ffffff';
+    swatch.value = isHexColor(color) ? color : '#ffffff';
 
-    const field = createElement('ha-textfield', {
-      label: TEXTS.color,
-      value: item.color || ''
-    });
-
-    const commit = this._dedupe(item.color || '', onChange);
-
-    // `change` rather than `input`: the picker fires continuously while dragging and each
+    // `change` rather than `input`: the picker fires continuously while dragging and every
     // event rebuilds the card preview
-    swatch.addEventListener('change', () => {
-      field.value = swatch.value;
-      commit(swatch.value);
-    });
+    swatch.addEventListener('change', () => onChange(swatch.value));
 
-    ['input', 'change'].forEach(eventName => {
-      field.addEventListener(eventName, () => {
-        if (isHex(field.value)) {
-          swatch.value = field.value;
-        }
-        commit(field.value);
-      });
-    });
-
-    return [swatch, field];
-  }
-
-  _numberField(label, value, onChange, options = {}) {
-    const field = createElement('ha-textfield', {
-      label,
-      className: 'narrow',
-      type: 'number',
-      value: value !== undefined && value !== null ? String(value) : '',
-      ...options
-    });
-
-    const commit = this._dedupe(value, onChange);
-
-    // While typing, ignore the states a number goes through ('', '-', '1e'); on blur,
-    // an unreadable field falls back to 0
-    field.addEventListener('input', () => {
-      const parsed = parseFloat(field.value);
-      if (Number.isFinite(parsed)) commit(parsed);
-    });
-
-    field.addEventListener('change', () => {
-      const parsed = parseFloat(field.value);
-      commit(Number.isFinite(parsed) ? parsed : 0);
-    });
-
-    return field;
-  }
-
-  _textField(label, value, onChange) {
-    const field = createElement('ha-textfield', { label, value: value || '' });
-    const commit = this._dedupe(value || '', onChange);
-
-    ['input', 'change'].forEach(eventName => {
-      field.addEventListener(eventName, () => commit(field.value));
-    });
-
-    return field;
+    return swatch;
   }
 
   _removeButton(onRemove) {
@@ -731,27 +693,24 @@ class DualGaugeCardEditor extends HTMLElement {
 
   _buildRow(index, listName, item, itemIndex) {
     const row = createElement('div', { className: 'list-row' });
-    const patch = (changes) => this._updateItem(index, listName, itemIndex, changes);
 
-    if (listName === 'severity') {
-      row.append(...this._colorField(item, (color) => patch({ color })));
-      row.appendChild(this._numberField(TEXTS.value, item.value, (value) => patch({ value }), { step: 'any' }));
-    } else if (listName === 'markers') {
-      row.appendChild(this._numberField(TEXTS.value, item.value, (value) => patch({ value }), { step: 'any' }));
-      row.append(...this._colorField(item, (color) => patch({ color })));
-      row.appendChild(this._textField(TEXTS.label, item.label, (label) => patch({ label })));
-    } else {
-      row.appendChild(this._numberField(TEXTS.from, item.from, (from) => patch({ from }), { step: 'any' }));
-      row.appendChild(this._numberField(TEXTS.to, item.to, (to) => patch({ to }), { step: 'any' }));
-      row.append(...this._colorField(item, (color) => patch({ color })));
-      row.appendChild(this._numberField(TEXTS.opacity, item.opacity, (opacity) => patch({ opacity }), {
-        step: '0.1',
-        min: '0',
-        max: '1'
-      }));
-    }
+    const swatch = this._colorSwatch(item.color, (color) => {
+      this._updateItem(index, listName, itemIndex, { color });
+    });
+    row.appendChild(swatch);
+
+    // The form carries every field of the item, so a cleared field really disappears
+    const form = this._createForm(ROW_SCHEMAS[listName], (value) => {
+      this._replaceItem(index, listName, itemIndex, () => stripEmpty(value));
+    });
+    form.className = 'row-form';
+    form.data = item;
+    row.appendChild(form);
 
     row.appendChild(this._removeButton(() => this._removeItem(index, listName, itemIndex)));
+
+    row._form = form;
+    row._swatch = swatch;
     return row;
   }
 
@@ -761,17 +720,28 @@ class DualGaugeCardEditor extends HTMLElement {
 
     const items = this._gauge(index)[listName] || [];
 
-    // Rebuild the rows only when items are added or removed. Editing a field already
-    // updates the DOM the user is typing in, recreating it would steal the focus.
-    if (panel._itemCount === items.length) return;
-    panel._itemCount = items.length;
+    // Rebuild the rows only when items are added or removed, otherwise push the values
+    // back into the existing rows so the field being edited keeps the focus
+    if (panel._itemCount !== items.length) {
+      panel._itemCount = items.length;
+      panel._list.innerHTML = '';
+      items.forEach((item, itemIndex) => {
+        panel._list.appendChild(this._buildRow(index, listName, item, itemIndex));
+      });
+      panel._empty.style.display = items.length ? 'none' : '';
+      return;
+    }
 
-    panel._list.innerHTML = '';
-    items.forEach((item, itemIndex) => {
-      panel._list.appendChild(this._buildRow(index, listName, item, itemIndex));
+    [...panel._list.children].forEach((row, itemIndex) => {
+      const item = items[itemIndex];
+      row._form.hass = this._hass;
+      row._form.data = item;
+
+      const hex = isHexColor(item.color) ? item.color : '#ffffff';
+      if (row._swatch.value !== hex) {
+        row._swatch.value = hex;
+      }
     });
-
-    panel._empty.style.display = items.length ? 'none' : '';
   }
 
   // --------------------------------------------------------------------------
@@ -808,11 +778,15 @@ class DualGaugeCardEditor extends HTMLElement {
   }
 
   _updateItem(index, listName, itemIndex, changes) {
+    this._replaceItem(index, listName, itemIndex, (item) => ({ ...item, ...changes }));
+  }
+
+  _replaceItem(index, listName, itemIndex, replace) {
     const gauge = this._gauge(index);
     const list = [...(gauge[listName] || [])];
     if (!list[itemIndex]) return;
 
-    list[itemIndex] = { ...list[itemIndex], ...changes };
+    list[itemIndex] = replace(list[itemIndex]);
     this._updateGauge(index, { ...gauge, [listName]: list });
   }
 

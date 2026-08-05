@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-08-05
+
+### Fixed
+- 🐛 **Severity, markers and zones rows were unusable in the visual editor**: only the color
+  swatch and the remove button showed up, the value, label, from, to and opacity fields were
+  blank. These rows were the last place where the editor instantiated a `ha-textfield`
+  itself, and that component is loaded on demand by Home Assistant, so it was not available
+  yet when the rows were built. The rows are now rendered by `ha-form` like the rest of the
+  editor, which takes care of loading its own selectors.
+  - Clearing a field of a row now removes the key from the item
+  - Row columns are narrower than the `ha-form` default so a row stays on a single line in
+    the edit dialog
+
 ## [1.5.0] - 2026-08-03
 
 ### Changed
