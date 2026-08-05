@@ -1,6 +1,6 @@
 /**
  * Dual Gauge Card Editor - Visual Configuration Editor
- * Version: 1.5.2
+ * Version: 1.5.3
  *
  * This file is dynamically loaded by dual-gauge-card.js
  * when the user opens the visual editor.
@@ -422,8 +422,18 @@ class DualGaugeCardEditor extends HTMLElement {
   }
 
   set hass(hass) {
+    const firstHass = !this._hass;
     this._hass = hass;
-    this._updateEditor();
+
+    // Home Assistant pushes a new hass object on every state change, several times per
+    // second on a busy instance. Only the forms need it: re-pushing the configuration here
+    // would fight with whatever the user is editing.
+    if (firstHass || !this._rendered) {
+      this._updateEditor();
+      return;
+    }
+
+    this._applyHass();
   }
 
   get hass() {
@@ -743,8 +753,12 @@ class DualGaugeCardEditor extends HTMLElement {
       row._form.hass = this._hass;
       row._form.data = item;
 
+      // The colour picker of the browser is a modal that keeps its input focused, and it
+      // reports the colour under the cursor as it is being chosen. Writing to `value` while
+      // it is open cancels the selection in progress, so the swatch is only realigned when
+      // the user is not in it — typically after the colour was typed in the text field.
       const hex = isHexColor(item.color) ? item.color : '#ffffff';
-      if (row._swatch.value !== hex) {
+      if (this.shadowRoot.activeElement !== row._swatch && row._swatch.value !== hex) {
         row._swatch.value = hex;
       }
     });
@@ -794,6 +808,21 @@ class DualGaugeCardEditor extends HTMLElement {
 
     list[itemIndex] = replace(list[itemIndex]);
     this._updateGauge(index, { ...gauge, [listName]: list });
+  }
+
+  /**
+   * Hand the fresh hass down to every form, without touching the values being edited
+   */
+  _applyHass() {
+    Object.values(this._forms).forEach(form => {
+      form.hass = this._hass;
+    });
+
+    Object.values(this._lists).forEach(panel => {
+      [...panel._list.children].forEach(row => {
+        row._form.hass = this._hass;
+      });
+    });
   }
 
   _applyConfig() {
