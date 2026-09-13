@@ -1,6 +1,6 @@
 /**
  * Dual Gauge Card - Standalone Version (Non-compiled)
- * Version: 1.5.3
+ * Version: 1.7.0
  * 
  * Ce fichier est le point d'entrée principal qui charge :
  * - Le core de la carte (inline ci-dessous)
@@ -11,7 +11,7 @@
 // CONFIGURATION AND THEMES
 // ============================================================================
 
-const CARD_VERSION = '1.5.3';
+const CARD_VERSION = '1.7.0';
 
 const themes = {
   default: {
@@ -73,19 +73,146 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-function getLedColor(value, severity, min, max) {
-  // Valeurs par défaut basées sur le pourcentage (0-100%)
-  const defaultSeverity = [
-    { color: "#4caf50", value: 20 },
-    { color: "#ffeb3b", value: 50 },
-    { color: "#f44336", value: 100 },
-  ];
+// Valeurs par défaut basées sur le pourcentage (0-100%)
+const DEFAULT_SEVERITY = [
+  { color: "#4caf50", value: 20 },
+  { color: "#ffeb3b", value: 50 },
+  { color: "#f44336", value: 100 },
+];
 
-  // Chaque seuil donne la couleur utilisée jusqu'à sa valeur, donc le premier seuil dont la
-  // valeur est atteinte gagne. On trie sur une copie : sans cela, un seuil saisi dans le
-  // désordre (par exemple ajouté en fin de liste) ne s'applique jamais, car un seuil de
-  // valeur supérieure placé avant lui répond en premier.
-  const severityConfig = [...(severity || defaultSeverity)].sort((a, b) => a.value - b.value);
+/**
+ * Thresholds in use, sorted ascending, with the green/yellow/red fallback when the gauge
+ * has no severity of its own.
+ *
+ * Chaque seuil donne la couleur utilisée jusqu'à sa valeur, donc le premier seuil dont la
+ * valeur est atteinte gagne. On trie sur une copie : sans cela, un seuil saisi dans le
+ * désordre (par exemple ajouté en fin de liste) ne s'applique jamais, car un seuil de
+ * valeur supérieure placé avant lui répond en premier.
+ * @param {Array} severity - Thresholds of a gauge, or undefined
+ * @returns {Array} Sorted copy of the thresholds
+ */
+function getSeverityLevels(severity) {
+  return [...(severity || DEFAULT_SEVERITY)].sort((a, b) => a.value - b.value);
+}
+
+// A canvas normalises every CSS colour notation into a hex or rgb() string, which is the
+// only cheap way to read a named colour or an hsl() back as numbers. The context and the
+// results are kept because the LED loop asks for the same handful of colours on every frame.
+const COLOR_SENTINEL = '#010203';
+const HEX_PATTERN = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+const rgbCache = {};
+let colorContext = null;
+
+/**
+ * @param {string} hex - #rgb or #rrggbb
+ * @returns {Array<number>} [r, g, b]
+ */
+function hexToRgbTriplet(hex) {
+  let digits = hex.slice(1);
+  if (digits.length === 3) {
+    digits = digits.split('').map(c => c + c).join('');
+  }
+  const packed = parseInt(digits, 16);
+  return [(packed >> 16) & 255, (packed >> 8) & 255, packed & 255];
+}
+
+/**
+ * Resolve a CSS colour to [r, g, b], or null when it cannot be resolved without a layout —
+ * `var(--theme-colour)` most notably, which is why gradient mode falls back to the stepped
+ * colour instead of guessing.
+ * @param {string} color - Any CSS colour
+ * @returns {Array<number>|null} [r, g, b] or null
+ */
+function parseColorToRgb(color) {
+  if (!color) return null;
+
+  const key = String(color).trim();
+  if (key in rgbCache) return rgbCache[key];
+
+  let rgb = null;
+  let normalised = key;
+
+  if (!HEX_PATTERN.test(key)) {
+    // Named colours, rgb() and hsl() are normalised by the canvas; it silently keeps its
+    // previous value for anything it cannot parse, hence the sentinel written before.
+    try {
+      colorContext = colorContext || document.createElement('canvas').getContext('2d');
+      colorContext.fillStyle = COLOR_SENTINEL;
+      colorContext.fillStyle = key;
+      normalised = colorContext.fillStyle === COLOR_SENTINEL && key.toLowerCase() !== COLOR_SENTINEL
+        ? null
+        : colorContext.fillStyle;
+    } catch (error) {
+      normalised = null;
+    }
+  }
+
+  if (normalised && HEX_PATTERN.test(normalised)) {
+    rgb = hexToRgbTriplet(normalised);
+  } else if (normalised) {
+    const match = normalised.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
+    if (match) {
+      rgb = [Math.round(+match[1]), Math.round(+match[2]), Math.round(+match[3])];
+    }
+  }
+
+  rgbCache[key] = rgb;
+  return rgb;
+}
+
+/**
+ * Colour interpolated between the two thresholds surrounding the value.
+ * @param {number} value - Normalised value (0-100%)
+ * @param {Array} severity - Thresholds of the gauge
+ * @param {number} [min] - Minimum value, when the thresholds are in real units
+ * @param {number} [max] - Maximum value, when the thresholds are in real units
+ * @returns {string|null} An `rgb(...)` colour, or null when an end colour is unparsable
+ */
+function getGradientColor(value, severity, min, max) {
+  const levels = getSeverityLevels(severity);
+  if (levels.length === 0) return null;
+
+  // Same convention as the stepped logic below: with min/max the thresholds are real
+  // values, without them they are percentages compared to the value directly.
+  const target = (min !== undefined && max !== undefined)
+    ? min + (value / 100) * (max - min)
+    : value;
+
+  if (levels.length === 1 || target <= levels[0].value) return levels[0].color;
+  if (target >= levels[levels.length - 1].value) return levels[levels.length - 1].color;
+
+  let i = 0;
+  while (i < levels.length - 2 && target >= levels[i + 1].value) i++;
+  const low = levels[i];
+  const high = levels[i + 1];
+
+  const span = high.value - low.value;
+  const ratio = span > 0 ? (target - low.value) / span : 0;
+
+  const from = parseColorToRgb(low.color);
+  const to = parseColorToRgb(high.color);
+  if (!from || !to) return null;
+
+  const mix = from.map((channel, k) => Math.round(channel + (to[k] - channel) * ratio));
+  return `rgb(${mix[0]}, ${mix[1]}, ${mix[2]})`;
+}
+
+/**
+ * @param {number} value - Normalised value (0-100%)
+ * @param {Array} severity - Thresholds of the gauge
+ * @param {number} [min] - Minimum value, when the thresholds are in real units
+ * @param {number} [max] - Maximum value, when the thresholds are in real units
+ * @param {string} [mode] - 'steps', 'gradient' or 'gradient_arc'
+ * @returns {string} The colour to paint with
+ */
+function getLedColor(value, severity, min, max, mode = 'steps') {
+  if (mode === 'gradient' || mode === 'gradient_arc') {
+    const blended = getGradientColor(value, severity, min, max);
+    if (blended) return blended;
+    // Unparsable colour (a theme variable, say): fall through to the stepped colour.
+  }
+
+  const severityConfig = getSeverityLevels(severity);
 
   // Si min et max sont fournis, convertir la valeur normalisée (0-100%) en valeur réelle
   if (min !== undefined && max !== undefined) {
@@ -135,6 +262,71 @@ function getArcGeometry(gaugeConfig) {
       ? Math.min(arcLength, 360)
       : DEFAULT_ARC_LENGTH
   };
+}
+
+/**
+ * Read the LED geometry of a gauge
+ *
+ * Round LEDs are circles of `led_size`; rectangular ones are VU-meter segments, `led_size`
+ * thick along the arc and `led_length` long along the radius. A LED is positioned by its
+ * centre, so the ring radius has to come in by half of each dimension: with
+ * `ledLength === ledSize` the margin collapses to the historical `led_size`, which keeps
+ * existing cards pixel-identical.
+ * @param {Object} gaugeConfig - Configuration of a single gauge
+ * @returns {{isRect: boolean, ledSize: number, ledLength: number, cornerRadius: number, ledMargin: number}} Geometry
+ */
+function getLedGeometry(gaugeConfig, defaultLedSize) {
+  const ledSize = gaugeConfig?.led_size || defaultLedSize;
+  const isRect = gaugeConfig?.led_shape === 'rect';
+
+  const configuredLength = Number(gaugeConfig?.led_length);
+  const ledLength = isRect
+    ? (Number.isFinite(configuredLength) && configuredLength > 0 ? configuredLength : ledSize * 2)
+    : ledSize;
+
+  const configuredRadius = Number(gaugeConfig?.led_corner_radius);
+  const cornerRadius = Number.isFinite(configuredRadius) && configuredRadius >= 0 ? configuredRadius : 1;
+
+  return {
+    isRect,
+    ledSize,
+    ledLength,
+    cornerRadius,
+    ledMargin: ledLength / 2 + ledSize / 2
+  };
+}
+
+/**
+ * Radius at which the markers of a gauge are drawn
+ *
+ * Without a `markers_radius` the markers simply follow the ring their gauge is drawn on.
+ * With one, the value was written against the ring the gauge sat on in the configuration,
+ * so `swap_gauges` shifts it by the distance between the two rings: "12px inside my ring"
+ * still means "12px inside my ring" once the gauge has moved to the other one, instead of
+ * leaving the markers behind on the ring they were tuned for.
+ * @param {Object} gaugeConfig - Configuration of a single gauge
+ * @param {number} ringRadius - Radius of the ring the gauge is drawn on
+ * @param {number} authoredRingRadius - Radius of the ring the value was written against
+ * @param {boolean} swapped - Whether the two gauges have been swapped
+ * @returns {number} Radius in pixels
+ */
+function getMarkersRadius(gaugeConfig, ringRadius, authoredRingRadius, swapped) {
+  if (gaugeConfig?.markers_radius === undefined) return ringRadius;
+
+  return swapped
+    ? gaugeConfig.markers_radius - authoredRingRadius + ringRadius
+    : gaugeConfig.markers_radius;
+}
+
+const DEFAULT_VALUE_ORDER = 'inner_first';
+
+/**
+ * Order of the two numeric values stacked in the centre of the card
+ * @param {Object} config - Card configuration
+ * @returns {string} 'inner_first' (default) or 'outer_first'
+ */
+function getValueOrder(config) {
+  return config?.value_order === 'outer_first' ? 'outer_first' : DEFAULT_VALUE_ORDER;
 }
 
 /**
@@ -451,14 +643,18 @@ const stylesCSS = `
   height: var(--outer-gauge-size, var(--gauge-size));
 }
 
+/* Round LEDs keep --led-width/--led-height equal to --led-size and a 50% radius, so these
+   rules render exactly as before; rectangular segments widen along the radius instead. */
 .dual-gauge .led[id^="led-inner-"] {
-  width: var(--led-size-inner);
-  height: var(--led-size-inner);
+  width: var(--led-width-inner, var(--led-size-inner));
+  height: var(--led-height-inner, var(--led-size-inner));
+  border-radius: var(--led-radius-inner, 50%);
 }
 
 .dual-gauge .led[id^="led-outer-"] {
-  width: var(--led-size-outer);
-  height: var(--led-size-outer);
+  width: var(--led-width-outer, var(--led-size-outer));
+  height: var(--led-height-outer, var(--led-size-outer));
+  border-radius: var(--led-radius-outer, 50%);
 }
 
 .dual-center {
@@ -516,7 +712,7 @@ const stylesCSS = `
 // RENDERER
 // ============================================================================
 
-function generateLedsHTML(ledsCount, radius, ledSize, prefix = '', startAngle = DEFAULT_START_ANGLE, arcLength = DEFAULT_ARC_LENGTH) {
+function generateLedsHTML(ledsCount, radius, ledMargin, prefix = '', startAngle = DEFAULT_START_ANGLE, arcLength = DEFAULT_ARC_LENGTH) {
   // On a full circle the last LED must not land on the first one, so the step divides the
   // arc by the LED count. On a partial arc both ends are visible and must carry a LED.
   const step = arcLength >= 360
@@ -526,7 +722,9 @@ function generateLedsHTML(ledsCount, radius, ledSize, prefix = '', startAngle = 
   const leds = [];
   for (let i = 0; i < ledsCount; i++) {
     const angle = startAngle + i * step - 90;
-    const translate = radius - ledSize;
+    // `rotate()` turns the local frame before `translate()`, so the element's own X axis
+    // already points outwards: a rectangular LED needs no rotation of its own.
+    const translate = radius - ledMargin;
     leds.push(`<div class="led" id="led-${prefix}${prefix ? '-' : ''}${i}" style="transform: rotate(${angle}deg) translate(${translate}px);"></div>`);
   }
   return leds.join('');
@@ -552,6 +750,9 @@ function renderDual(context) {
     : (innerGaugeSize / 2);
   const ledSize1 = config1.led_size || 6;
   const ledSize2 = config2.led_size || 8;
+
+  const led1 = getLedGeometry(config1, 6);
+  const led2 = getLedGeometry(config2, 8);
 
   const arc1 = getArcGeometry(config1);
   const arc2 = getArcGeometry(config2);
@@ -605,6 +806,12 @@ function renderDual(context) {
     --led-size: ${ledSize2}px;
     --led-size-outer: ${ledSize2}px;
     --led-size-inner: ${ledSize1}px;
+    --led-width-inner: ${led1.ledLength}px;
+    --led-height-inner: ${led1.ledSize}px;
+    --led-radius-inner: ${led1.isRect ? `${led1.cornerRadius}px` : '50%'};
+    --led-width-outer: ${led2.ledLength}px;
+    --led-height-outer: ${led2.ledSize}px;
+    --led-radius-outer: ${led2.isRect ? `${led2.cornerRadius}px` : '50%'};
     --center-size: ${innerGaugeSize * 0.6}px;
     --card-shadow: ${context.config.hide_shadows ? 'none' : '0 0 15px rgba(0, 0, 0, 0.5)'};
     --led-shadow: ${context.config.hide_shadows ? 'none' : '0 0 4px rgba(0, 0, 0, 0.8)'};
@@ -656,6 +863,23 @@ function renderDual(context) {
   // Générer le HTML du titre
   const titleHTML = `<div class="${titleClass}">${context.config.name || ""}</div>`;
 
+  // The two values are stacked in the centre. Their ids stay tied to the ring they belong
+  // to, only the order in which they are written changes, so the update loop and the click
+  // handlers keep working whichever way round they are shown.
+  const innerGroupHTML = `
+          <div class="value-group" id="group-inner">
+            <div class="value" id="value-inner">0</div>
+            <div class="unit" id="unit-inner"></div>
+          </div>`;
+  const outerGroupHTML = `
+          <div class="value-group" id="group-outer">
+            <div class="value" id="value-outer">0</div>
+            <div class="unit" id="unit-outer"></div>
+          </div>`;
+  const valueGroupsHTML = getValueOrder(context.config) === 'outer_first'
+    ? outerGroupHTML + innerGroupHTML
+    : innerGroupHTML + outerGroupHTML;
+
   const gaugeHTML = `
     <style>
       :host {
@@ -670,17 +894,10 @@ function renderDual(context) {
         <div class="outer-shadow" id="outer-shadow-outer"></div>
         <div class="center-shadow" id="center-shadow-inner"></div>
         <div class="center-shadow" id="center-shadow-outer"></div>
-        ${generateLedsHTML(ledsCount2, outerGaugeSize / 2, ledSize2, 'outer', arc2.startAngle, arc2.arcLength)}
-        ${generateLedsHTML(ledsCount1, innerGaugeRadius, ledSize1, 'inner', arc1.startAngle, arc1.arcLength)}
+        ${generateLedsHTML(ledsCount2, outerGaugeSize / 2, led2.ledMargin, 'outer', arc2.startAngle, arc2.arcLength)}
+        ${generateLedsHTML(ledsCount1, innerGaugeRadius, led1.ledMargin, 'inner', arc1.startAngle, arc1.arcLength)}
         <div class="center dual-center" style="background: ${globalTheme.centerBackground}">
-          <div class="value-group" id="group-inner">
-            <div class="value" id="value-inner">0</div>
-            <div class="unit" id="unit-inner"></div>
-          </div>
-          <div class="value-group" id="group-outer">
-            <div class="value" id="value-outer">0</div>
-            <div class="unit" id="unit-outer"></div>
-          </div>
+          ${valueGroupsHTML}
         </div>
       </div>
       ${!isInsidePosition ? titleHTML : ''}
@@ -714,13 +931,14 @@ function addMarkersAndZones(context) {
   const arc1 = getArcGeometry(config1);
   const arc2 = getArcGeometry(config2);
 
+  const outerGaugeRadius = outerGaugeSize / 2;
+  const swapped = context.config.swap_gauges || false;
+
   // Ajouter markers pour la gauge interne (gauge 0)
   if (config1.markers) {
     const min1 = config1.min || 0;
     const max1 = config1.max || 100;
-    const markersRadius1 = config1.markers_radius !== undefined
-      ? config1.markers_radius
-      : innerGaugeRadius;
+    const markersRadius1 = getMarkersRadius(config1, innerGaugeRadius, outerGaugeRadius, swapped);
     // Labels inside by default (true or undefined), outside if false
     const markersInside1 = config1.markers_inside !== false;
 
@@ -777,9 +995,7 @@ function addMarkersAndZones(context) {
   if (config2.markers) {
     const min2 = config2.min || 0;
     const max2 = config2.max || 100;
-    const markersRadius2 = config2.markers_radius !== undefined
-      ? config2.markers_radius
-      : (outerGaugeSize / 2);
+    const markersRadius2 = getMarkersRadius(config2, outerGaugeRadius, innerGaugeRadius, swapped);
     // Labels inside by default (true or undefined), outside if false
     const markersInside2 = config2.markers_inside !== false;
 
@@ -947,7 +1163,10 @@ function updateLedsDual(context, value, ledsCount, prefix, gaugeConfig) {
   const { arcLength } = getArcGeometry(gaugeConfig);
   const ledInfo = calculateBidirectionalLeds(realValue, min, max, ledsCount, bidirectional, arcLength);
 
-  const color = getLedColor(ledInfo.normalizedValue, gaugeConfig.severity, min, max);
+  // Shadows and, outside `gradient_arc`, every lit LED share the colour of the value.
+  const mode = gaugeConfig.severity_mode || 'steps';
+  const color = getLedColor(ledInfo.normalizedValue, gaugeConfig.severity, min, max, mode);
+  const arcGradient = mode === 'gradient_arc';
 
   // Appliquer l'ombre externe si enable_shadow est activé
   if (gaugeConfig.enable_shadow) {
@@ -978,9 +1197,14 @@ function updateLedsDual(context, value, ledsCount, prefix, gaugeConfig) {
     }
 
     if (isActive) {
+      // In `gradient_arc` each LED is coloured after its own position on the scale, so the
+      // lit part of the ring shows the whole gradient instead of one flat colour.
+      const ledColor = arcGradient
+        ? getLedColor(((i + 0.5) / ledsCount) * 100, gaugeConfig.severity, min, max, 'gradient')
+        : color;
       led.style.display = "";
-      led.style.background = `radial-gradient(circle, rgba(255, 255, 255, 0.8), ${color})`;
-      led.style.boxShadow = `0 0 8px ${color}`;
+      led.style.background = `radial-gradient(circle, rgba(255, 255, 255, 0.8), ${ledColor})`;
+      led.style.boxShadow = `0 0 8px ${ledColor}`;
       led.classList.add("active");
     } else {
       if (gaugeConfig.hide_inactive_leds) {
@@ -1041,7 +1265,7 @@ function updateCenterShadow(context, value, gaugeConfig, shadowId) {
 
   const min = gaugeConfig.min !== undefined ? gaugeConfig.min : 0;
   const max = gaugeConfig.max !== undefined ? gaugeConfig.max : 100;
-  const color = getLedColor(value, gaugeConfig.severity, min, max);
+  const color = getLedColor(value, gaugeConfig.severity, min, max, gaugeConfig.severity_mode);
   const blur = gaugeConfig.center_shadow_blur || 30;
   const spread = gaugeConfig.center_shadow_spread || 15;
   const centerShadow = context.shadowRoot.getElementById(`center-shadow-${shadowId}`);
@@ -1056,7 +1280,7 @@ function updateOuterShadow(context, value, gaugeConfig, shadowId, radius) {
 
   const min = gaugeConfig.min !== undefined ? gaugeConfig.min : 0;
   const max = gaugeConfig.max !== undefined ? gaugeConfig.max : 100;
-  const color = getLedColor(value, gaugeConfig.severity, min, max);
+  const color = getLedColor(value, gaugeConfig.severity, min, max, gaugeConfig.severity_mode);
   const blur = gaugeConfig.outer_shadow_blur || 30;
   const spread = gaugeConfig.outer_shadow_spread || 15;
   const outerShadow = context.shadowRoot.getElementById(`outer-shadow-${shadowId}`);
@@ -1141,8 +1365,42 @@ function parseDualConfig(config) {
     }
   });
 
+  const parsedGauges = config.gauges.map(gaugeConfig => {
+    const arc = getArcGeometry(gaugeConfig);
+
+    return {
+      ...gaugeConfig,
+      min: gaugeConfig.min !== undefined ? gaugeConfig.min : 0,
+      max: gaugeConfig.max !== undefined ? gaugeConfig.max : 100,
+      leds_count: gaugeConfig.leds_count || 100,
+      led_size: gaugeConfig.led_size || 8,
+      led_shape: gaugeConfig.led_shape === 'rect' ? 'rect' : 'round',
+      led_length: gaugeConfig.led_length !== undefined ? gaugeConfig.led_length : null,
+      led_corner_radius: gaugeConfig.led_corner_radius !== undefined ? gaugeConfig.led_corner_radius : 1,
+      severity_mode: gaugeConfig.severity_mode || 'steps',
+      decimals: gaugeConfig.decimals !== undefined ? gaugeConfig.decimals : 1,
+      smooth_transitions: gaugeConfig.smooth_transitions !== false,
+      animation_duration: gaugeConfig.animation_duration || 800,
+      severity: gaugeConfig.severity || [
+        { color: '#4caf50', value: 0 },
+        { color: '#ff9800', value: 50 },
+        { color: '#f44336', value: 75 }
+      ],
+      theme: gaugeConfig.theme || 'default',
+      hide_inactive_leds: gaugeConfig.hide_inactive_leds || false,
+      bidirectional: gaugeConfig.bidirectional || false,
+      start_angle: arc.startAngle,
+      arc_length: arc.arcLength
+    };
+  });
+
+  // Everything downstream reads gauges[0] as the inner ring and gauges[1] as the outer one,
+  // so swapping the pair here moves each gauge whole — LEDs, markers, zones, shadows, its
+  // typography defaults and its value — onto the other ring, without rewriting the YAML.
   const parsedConfig = {
     ...config,
+    swap_gauges: config.swap_gauges || false,
+    value_order: getValueOrder(config),
     gauge_size: config.gauge_size || 200,
     inner_gauge_size: config.inner_gauge_size || null,
     update_interval: config.update_interval || 1000,
@@ -1150,30 +1408,7 @@ function parseDualConfig(config) {
     debounce_updates: config.debounce_updates || false,
     hide_shadows: config.hide_shadows || false,
 
-    gauges: config.gauges.map(gaugeConfig => {
-      const arc = getArcGeometry(gaugeConfig);
-
-      return {
-        ...gaugeConfig,
-        min: gaugeConfig.min !== undefined ? gaugeConfig.min : 0,
-        max: gaugeConfig.max !== undefined ? gaugeConfig.max : 100,
-        leds_count: gaugeConfig.leds_count || 100,
-        led_size: gaugeConfig.led_size || 8,
-        decimals: gaugeConfig.decimals !== undefined ? gaugeConfig.decimals : 1,
-        smooth_transitions: gaugeConfig.smooth_transitions !== false,
-        animation_duration: gaugeConfig.animation_duration || 800,
-        severity: gaugeConfig.severity || [
-          { color: '#4caf50', value: 0 },
-          { color: '#ff9800', value: 50 },
-          { color: '#f44336', value: 75 }
-        ],
-        theme: gaugeConfig.theme || 'default',
-        hide_inactive_leds: gaugeConfig.hide_inactive_leds || false,
-        bidirectional: gaugeConfig.bidirectional || false,
-        start_angle: arc.startAngle,
-        arc_length: arc.arcLength
-      };
-    })
+    gauges: config.swap_gauges ? [...parsedGauges].reverse() : parsedGauges
   };
 
   return parsedConfig;
@@ -1279,18 +1514,23 @@ class DualGaugeCard extends HTMLElement {
   static async getConfigElement() {
     // Charger l'éditeur dynamiquement s'il n'est pas déjà chargé
     if (!customElements.get('dual-gauge-card-editor')) {
+      // The editor is fetched at its own URL, which HACS does not version the way it
+      // versions the card itself, so without this the browser keeps serving the editor of
+      // the previously installed release and the new options never show up in the UI.
+      const cacheBuster = `?v=${CARD_VERSION}`;
+
       try {
         // Détecter le chemin de base du script courant
         const currentScript = document.querySelector('script[src*="dual-gauge-card"]');
         const basePath = currentScript ? currentScript.src.replace(/\/[^\/]*$/, '/') : '/';
         
         // Charger le fichier éditeur
-        await import(`${basePath}dual-gauge-card-editor.js`);
+        await import(`${basePath}dual-gauge-card-editor.js${cacheBuster}`);
       } catch (error) {
         console.warn('Dual Gauge Card: Failed to load editor dynamically, trying fallback...', error);
         // Fallback: essayer de charger depuis le même répertoire
         try {
-          await import('./dual-gauge-card-editor.js');
+          await import(`./dual-gauge-card-editor.js${cacheBuster}`);
         } catch (fallbackError) {
           console.error('Dual Gauge Card: Could not load editor', fallbackError);
           // Créer un éditeur minimal qui affiche un message d'erreur

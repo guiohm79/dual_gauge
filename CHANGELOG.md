@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-09-13
+
+### Added
+- ✨ **Order of the two values in the center**: `value_order` chooses which of the two
+  numbers sits on top. `inner_first` (default) keeps the current layout, `outer_first`
+  puts the outer gauge value above the inner one. Only the order of the two blocks
+  changes; each value keeps its own id, typography and click-to-history behaviour.
+- ✨ **Swapping the two gauges**: `swap_gauges: true` draws the first gauge of the list on
+  the outer ring and the second one on the inner ring. The gauge moves whole — LEDs,
+  markers, zones, shadows and its value follow it — so the two rings can be traded
+  without rewriting the `gauges` list. The visual editor renames its two gauge panels
+  accordingly, so a panel header always names the ring its gauge is drawn on.
+  - Markers and zones travel with their gauge. A `markers_radius` is read as an offset from
+    the ring the gauge was written against, so the swap carries it over to the other ring
+  - What stays with the ring is the value typography defaults and `inner_gauge_radius`
+
+### Fixed
+- 🐛 **Markers stayed behind on the old ring when `swap_gauges` was turned on**: a gauge
+  without `markers_radius` already followed its ring, but an explicit radius was used as an
+  absolute distance, so the markers kept the radius of the ring they had been tuned for
+  while their LEDs moved to the other one. The radius is now read as an offset from the ring
+  the gauge was written against and shifted with it.
+- 🐛 **New options could stay missing from the visual editor after an update**: the card
+  loads `dual-gauge-card-editor.js` with a dynamic `import()` at a fixed URL. HACS versions
+  the URL of the card itself, but nothing versioned the editor, so the browser kept serving
+  the editor of the previously installed release — the card rendered the new options but the
+  UI never offered them. The import is now stamped with the card version, so a new release
+  always fetches its own editor.
+- 🐛 The editor now prints its version in the console (`DUAL-GAUGE-CARD-EDITOR v1.7.0`)
+  instead of a fixed "Editor loaded", so a stale copy is visible at a glance
+
+## [1.6.0] - 2026-09-13
+
+### Added
+- ✨ **Rectangular LEDs (hi-fi VU meter style)**: `led_shape: rect` replaces the round LEDs
+  of a gauge with rectangular segments. `led_length` sets their length along the radius
+  (twice `led_size` by default) and `led_corner_radius` the rounding of their corners
+  (`1` by default, `0` for sharp corners). Both options are per gauge, so the two rings can
+  use different shapes, and both are available in the visual editor. Round LEDs are
+  unchanged: the ring radius now comes from `led_length / 2 + led_size / 2`, which is
+  exactly the previous margin when the two dimensions are equal.
+- ✨ **Color gradients between the thresholds**: `severity_mode` chooses how the `severity`
+  thresholds are turned into colors.
+  - `steps` (default) keeps the current behaviour, one flat color per threshold
+  - `gradient` blends the whole ring to a single color, interpolated in RGB between the two
+    thresholds surrounding the current value
+  - `gradient_arc` colors each LED after its own position on the scale, so the lit part of
+    the ring shows the whole gradient
+  A threshold color that cannot be read as numbers (`var(--theme-color)`) makes that gauge
+  fall back to `steps` rather than guess. The mode is chosen from a "Color mode" select at
+  the top of the severity panel of the visual editor, with a help text per mode.
+
 ## [1.5.3] - 2026-08-05
 
 ### Fixed

@@ -9,3 +9,4 @@ node_modules/
 # Package manager
 package-lock.json
 yarn.lock
+RELEASE_NOTES_v1.7.0.md

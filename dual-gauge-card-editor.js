@@ -1,6 +1,6 @@
 /**
  * Dual Gauge Card Editor - Visual Configuration Editor
- * Version: 1.5.3
+ * Version: 1.7.0
  *
  * This file is dynamically loaded by dual-gauge-card.js
  * when the user opens the visual editor.
@@ -10,6 +10,8 @@
  * editors. `ha-form` is also the component that loads its selectors on demand, which is why
  * the editor never instantiates a form control by itself.
  */
+
+const EDITOR_VERSION = '1.7.0';
 
 // ============================================================================
 // LABELS
@@ -23,6 +25,8 @@ const LABELS = {
   inner_gauge_size: 'Inner gauge size',
   inner_gauge_radius: 'Inner radius',
   title_position: 'Title position',
+  value_order: 'Value order',
+  swap_gauges: 'Swap the two gauges',
   card_theme: 'Card theme',
   update_interval: 'Update interval',
   hide_card: 'Hide card frame',
@@ -57,6 +61,9 @@ const LABELS = {
   decimals: 'Decimals',
   leds_count: 'LEDs count',
   led_size: 'LED size',
+  led_shape: 'LED shape',
+  led_length: 'Segment length',
+  led_corner_radius: 'Segment corner radius',
   start_angle: 'Start angle',
   arc_length: 'Arc length',
   theme: 'Theme',
@@ -87,6 +94,9 @@ const LABELS = {
   markers_radius: 'Markers radius',
   markers_inside: 'Labels inside',
 
+  // Severity
+  severity_mode: 'Color mode',
+
   // Severity, markers and zones rows
   color: 'Color',
   value: 'Value',
@@ -97,6 +107,11 @@ const LABELS = {
 };
 
 const HELPERS = {
+  led_size: 'Diameter of a round LED, or the thickness of a rectangular segment along the arc.',
+  led_length: 'Length of a segment along the radius. Leave empty for twice the LED size.',
+  led_corner_radius: 'Rounding of the segment corners. 0 gives sharp corners.',
+  value_order: 'Which of the two values is shown on top in the center of the card.',
+  swap_gauges: 'Draws the first gauge on the outer ring and the second one on the inner ring, without touching the order of the list below.',
   inner_gauge_radius: 'Positioning radius of the inner LEDs. The larger it is, the closer the inner gauge gets to the outer one.',
   start_angle: 'Where the gauge starts: 0° = top (12 o\'clock), positive values rotate clockwise.',
   arc_length: 'Angular span of the gauge: 360° = full circle, 270° = dashboard style, 180° = half circle.',
@@ -118,7 +133,6 @@ const TEXTS = {
   shadows: 'Shadows',
   valueUnitTypography: 'Value & unit typography',
   severity: 'Color thresholds (severity)',
-  severityHelp: 'Each threshold gives the color used up to its value, and the highest one also colors everything above it. They are applied from the lowest value to the highest, whatever the order of this list.',
   markers: 'Markers',
   zones: 'Colored zones',
   addThreshold: 'Add threshold',
@@ -128,6 +142,16 @@ const TEXTS = {
   emptySeverity: 'No threshold defined, the default colors are used.',
   emptyMarkers: 'No marker defined.',
   emptyZones: 'No zone defined.'
+};
+
+// The thresholds are always read from the lowest value to the highest, whatever the order
+// of the list; what changes between the modes is how the colors in between are produced.
+const ORDERING_NOTE = ' They are applied from the lowest value to the highest, whatever the order of this list.';
+
+const SEVERITY_MODE_HINTS = {
+  steps: 'Each threshold gives the color used up to its value, and the highest one also colors everything above it.' + ORDERING_NOTE,
+  gradient: 'The whole ring takes a single color, interpolated between the two thresholds surrounding the current value.' + ORDERING_NOTE,
+  gradient_arc: 'Each LED takes the color of its own position on the scale, so the lit part of the ring shows the full gradient.' + ORDERING_NOTE
 };
 
 // Descriptions shown by `ha-form` inside an expandable section: it asks for the helper of
@@ -144,11 +168,27 @@ const TITLE_POSITIONS = [
   { value: 'none', label: 'None' }
 ];
 
+const VALUE_ORDERS = [
+  { value: 'inner_first', label: 'Inner gauge on top' },
+  { value: 'outer_first', label: 'Outer gauge on top' }
+];
+
 const THEME_OPTIONS = [
   { value: 'default', label: 'Default' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
   { value: 'custom', label: 'Custom' }
+];
+
+const LED_SHAPES = [
+  { value: 'round', label: 'Round (LED)' },
+  { value: 'rect', label: 'Rectangle (VU meter)' }
+];
+
+const SEVERITY_MODES = [
+  { value: 'steps', label: 'Steps (one color per threshold)' },
+  { value: 'gradient', label: 'Gradient - whole ring blended by value' },
+  { value: 'gradient_arc', label: 'Gradient - blended along the ring' }
 ];
 
 const FONT_WEIGHTS = [
@@ -180,9 +220,11 @@ function generalSchema(config) {
     ]),
     grid([
       { name: 'title_position', ...select(TITLE_POSITIONS) },
-      { name: 'card_theme', ...select(THEME_OPTIONS) }
+      { name: 'card_theme', ...select(THEME_OPTIONS) },
+      { name: 'value_order', ...select(VALUE_ORDERS) }
     ]),
     grid([
+      { name: 'swap_gauges', ...bool() },
       { name: 'hide_card', ...bool() },
       { name: 'hide_shadows', ...bool() },
       { name: 'power_save_mode', ...bool() },
@@ -247,6 +289,17 @@ function gaugeSchema(gauge) {
     ]));
   }
 
+  // The length and the rounding only mean something for rectangular segments, so they are
+  // added to the schema the same way the shadow options are: only once they apply.
+  const shapeFields = [{ name: 'led_shape', ...select(LED_SHAPES) }];
+
+  if (gauge.led_shape === 'rect') {
+    shapeFields.push(
+      { name: 'led_length', ...num({ min: 4, max: 60, unit_of_measurement: 'px' }) },
+      { name: 'led_corner_radius', ...num({ min: 0, max: 10, unit_of_measurement: 'px' }) }
+    );
+  }
+
   return [
     { name: 'entity', selector: { entity: {} } },
     grid([
@@ -261,6 +314,7 @@ function gaugeSchema(gauge) {
       { name: 'start_angle', ...num({ min: -360, max: 360, unit_of_measurement: '°' }) },
       { name: 'arc_length', ...num({ min: 10, max: 360, unit_of_measurement: '°' }) }
     ]),
+    grid(shapeFields),
     grid([
       { name: 'theme', ...select(THEME_OPTIONS) },
       { name: 'animation_duration', ...num({ min: 0, max: 5000, step: 100, unit_of_measurement: 'ms' }) }
@@ -287,6 +341,10 @@ function gaugeSchema(gauge) {
     ])
   ];
 }
+
+const SEVERITY_OPTIONS_SCHEMA = [
+  { name: 'severity_mode', ...select(SEVERITY_MODES) }
+];
 
 const MARKERS_OPTIONS_SCHEMA = [
   grid([
@@ -359,7 +417,9 @@ function withGaugeDefaults(gauge) {
   return {
     ...gauge,
     smooth_transitions: gauge.smooth_transitions !== false,
-    markers_inside: gauge.markers_inside !== false
+    markers_inside: gauge.markers_inside !== false,
+    led_shape: gauge.led_shape || 'round',
+    severity_mode: gauge.severity_mode || 'steps'
   };
 }
 
@@ -398,6 +458,7 @@ class DualGaugeCardEditor extends HTMLElement {
     this._rendered = false;
     this._forms = {};
     this._lists = {};
+    this._gaugePanels = {};
     this._computeLabel = (schema) => LABELS[schema.name] || schema.name;
     this._computeHelper = (schema) => HELPERS[schema.name] || SECTION_HELPERS[schema.title];
   }
@@ -574,11 +635,23 @@ class DualGaugeCardEditor extends HTMLElement {
     return form;
   }
 
+  /**
+   * Header of a gauge panel: it names the ring the gauge is actually drawn on, which
+   * `swap_gauges` flips, so the panel always says where its changes will show up.
+   * @param {number} index - Index of the gauge in the list
+   * @returns {string} Panel header
+   */
+  _gaugeHeader(index) {
+    const inner = this._config?.swap_gauges ? 1 : 0;
+    return index === inner ? TEXTS.innerGauge : TEXTS.outerGauge;
+  }
+
   _buildGaugePanel(index) {
     const panel = createElement('ha-expansion-panel', {
-      header: index === 0 ? TEXTS.innerGauge : TEXTS.outerGauge,
+      header: this._gaugeHeader(index),
       outlined: true
     });
+    this._gaugePanels[index] = panel;
 
     const body = createElement('div', { className: 'panel-content' });
 
@@ -629,7 +702,7 @@ class DualGaugeCardEditor extends HTMLElement {
   _buildSeverityPanel(index) {
     const panel = this._buildListPanel(
       TEXTS.severity,
-      TEXTS.severityHelp,
+      null,
       TEXTS.emptySeverity,
       TEXTS.addThreshold,
       // A new threshold takes the top of the range rather than 0: at 0 it would only cover
@@ -640,6 +713,24 @@ class DualGaugeCardEditor extends HTMLElement {
         this._addItem(index, 'severity', { color: '#4caf50', value });
       }
     );
+
+    // The colour mode decides how the list below is read, so it comes first, followed by
+    // the help text of the selected mode. Merging into the current gauge rather than
+    // replacing it keeps the thresholds, the markers and the zones, which this form
+    // knows nothing about.
+    const body = panel._list.parentElement;
+
+    const modeForm = this._createForm(SEVERITY_OPTIONS_SCHEMA, (value) => {
+      this._updateGauge(index, stripEmpty({ ...this._gauge(index), ...value }));
+    });
+    this._forms[`severityOptions${index}`] = modeForm;
+
+    const hint = createElement('div', { className: 'helper' });
+    panel._modeHint = hint;
+
+    body.insertBefore(hint, body.firstChild);
+    body.insertBefore(modeForm, hint);
+
     this._lists[`severity${index}`] = panel;
     return panel;
   }
@@ -837,6 +928,8 @@ class DualGaugeCardEditor extends HTMLElement {
 
       const data = withGaugeDefaults(gauge);
 
+      this._gaugePanels[index].header = this._gaugeHeader(index);
+
       const form = this._forms[`gauge${index}`];
       form.hass = this._hass;
       form.schema = gaugeSchema(gauge);
@@ -845,6 +938,15 @@ class DualGaugeCardEditor extends HTMLElement {
       const markersOptions = this._forms[`markersOptions${index}`];
       markersOptions.hass = this._hass;
       markersOptions.data = data;
+
+      const severityOptions = this._forms[`severityOptions${index}`];
+      severityOptions.hass = this._hass;
+      severityOptions.data = data;
+
+      const severityPanel = this._lists[`severity${index}`];
+      if (severityPanel._modeHint) {
+        severityPanel._modeHint.textContent = SEVERITY_MODE_HINTS[data.severity_mode] || SEVERITY_MODE_HINTS.steps;
+      }
 
       this._renderList(index, 'severity');
       this._renderList(index, 'markers');
@@ -873,7 +975,7 @@ class DualGaugeCardEditor extends HTMLElement {
 customElements.define('dual-gauge-card-editor', DualGaugeCardEditor);
 
 console.info(
-  '%c DUAL-GAUGE-CARD-EDITOR %c Editor loaded ',
+  `%c DUAL-GAUGE-CARD-EDITOR %c v${EDITOR_VERSION} `,
   'color: white; background: #03a9f4; font-weight: bold;',
   'color: #03a9f4; background: white; font-weight: bold;'
 );

@@ -30,7 +30,7 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 
 <p align="center">
   <img src="https://github.com/guiohm79/dual_gauge/blob/main/captures/Exemple3.png" width="350" alt="Exemple 3">
-  <img src="https://github.com/guiohm79/dual_gauge/blob/main/captures/Exemple7.png" width="350" alt="Exemple 4">
+  <img src="https://github.com/guiohm79/dual_gauge/blob/main/captures/Exemple8.png" width="350" alt="Exemple 4">
 </p>
 
 <p align="center">
@@ -46,9 +46,13 @@ Perfect for comparing indoor/outdoor temperatures, displaying temperature and hu
 - Two independent circular gauges (inner and outer)
 - Separate configuration for each gauge
 - Configurable primary value display (choose which value shows large)
+- Choose which of the two values sits on top in the center
+- Swap the two gauges between the inner and the outer ring without rewriting the list
 - Adjustable gauge spacing
 - Adjustable start angle and arc length per gauge (full circle, 270°, half circle...)
 - bidirectional for negative values
+- Two LED shapes per gauge: round LEDs or rectangular segments (hi-fi VU meter style)
+- Color gradients: blend the severity colors smoothly instead of stepping between thresholds
 
 **Advanced Shadow System**
 - Independent shadow controls for each gauge
@@ -134,6 +138,8 @@ name: "My Dual Gauge"
 gauge_size: 200              # Outer gauge size
 inner_gauge_size: 130        # Inner gauge visual size (optional, default 65% of gauge_size)
 primary_gauge: inner         # 'inner' or 'outer' - determines which value displays large
+value_order: inner_first     # Which value sits on top in the center
+swap_gauges: false           # true draws the first gauge on the outer ring
 
 gauges:
   - entity: sensor.temperature_inside
@@ -152,7 +158,6 @@ gauges:
 | Option | Type | Default | Description |
 |--------|------|--------|-------------|
 | `name` | string | - | Title displayed |
-| `name` | string | - | Title displayed |
 | `title_position` | string | 'bottom' | Title position ('bottom', 'top', 'inside-top', 'inside-bottom', 'none') |
 | `title_font_size` | string | '16px' | Title font size (e.g., '18px', '1.2em') |
 | `title_font_family` | string | inherit | Title font family (e.g., 'Roboto, Arial') |
@@ -163,12 +168,71 @@ gauges:
 | `inner_gauge_size` | number | 65% | Inner gauge visual size in pixels |
 | `inner_gauge_radius` | number | inner_gauge_size/2 | Inner LEDs positioning radius (to adjust gauge spacing) |
 | `primary_gauge` | string | 'inner' | Primary gauge ('inner' or 'outer') - large value display |
+| `value_order` | string | 'inner_first' | Order of the two values in the center ('inner_first' or 'outer_first') |
+| `swap_gauges` | boolean | false | Draw the first gauge on the outer ring and the second one on the inner ring |
 | `card_theme` | string | - | Global card theme ('default', 'light', 'dark', 'custom') |
 | `card_background` | string | - | Custom card background color |
 | `hide_shadows` | boolean | false | Hide all shadows |
 | `power_save_mode` | boolean | false | Enable power save mode |
 | `debounce_updates` | boolean | false | Limit update frequency |
 | `update_interval` | number | 1000 | Update interval in ms |
+
+#### Center Value Order and Gauge Swapping
+
+Two options control the layout of the pair, without touching the content of the `gauges`
+list. They are independent and can be combined.
+
+`value_order` picks which of the two numbers sits on top in the center:
+
+```yaml
+# Default: the inner gauge value is on top, the outer one below
+value_order: inner_first
+
+# Reversed: the outer gauge value is on top
+value_order: outer_first
+```
+
+`swap_gauges` moves each gauge whole onto the other ring: its LEDs, markers, zones, shadows
+and its value all follow. `gauges[0]` stays the first gauge of the list, it is simply drawn
+on the outer ring instead of the inner one.
+
+```yaml
+type: custom:dual-gauge-card
+name: "Swapped rings"
+gauge_size: 220
+swap_gauges: true      # gauges[0] is drawn outside, gauges[1] inside
+value_order: outer_first
+
+gauges:
+  # Listed first, drawn on the OUTER ring because of swap_gauges
+  - entity: sensor.living_room_temperature
+    min: 0
+    max: 40
+    unit: "°C"
+    leds_count: 100
+    led_size: 8
+
+  # Listed second, drawn on the INNER ring
+  - entity: sensor.living_room_humidity
+    min: 0
+    max: 100
+    unit: '%'
+    leds_count: 80
+    led_size: 6
+```
+
+Markers and zones travel with their gauge. A `markers_radius` is read as an offset from the
+ring the gauge was written against, so it is carried over to the other ring by the swap:
+markers placed 12 px inside the inner ring stay 12 px inside the outer ring once the gauge
+moves there.
+
+**Note:** what stays with the ring rather than with the gauge is the value typography
+defaults (larger for the inner value) and `inner_gauge_radius`, which is a property of the
+inner ring itself. Set the font sizes explicitly on a gauge if you want them to travel
+with it.
+
+**Note:** the visual editor renames its two gauge panels when `swap_gauges` is on, so the
+panel header always names the ring the gauge is actually drawn on.
 
 ### Global Theme Options
 
@@ -238,7 +302,10 @@ gauges:
 | Option | Type | Default | Description |
 |--------|------|--------|-------------|
 | `leds_count` | number | 100 | Number of LEDs on the circle |
-| `led_size` | number | 8 (outer) / 6 (inner) | LED size in pixels |
+| `led_size` | number | 8 (outer) / 6 (inner) | Diameter of a round LED, or the thickness of a rectangular segment along the arc, in pixels |
+| `led_shape` | string | `round` | `round` = circular LEDs, `rect` = rectangular segments (hi-fi VU meter style) |
+| `led_length` | number | `led_size` × 2 | Length of a rectangular segment along the radius, in pixels. Ignored when `led_shape` is `round` |
+| `led_corner_radius` | number | 1 | Corner rounding of a rectangular segment, in pixels. `0` gives sharp corners. Ignored when `led_shape` is `round` |
 | `start_angle` | number | 0 | Offset of the gauge starting point, in degrees (see below) |
 | `arc_length` | number | 360 | Angular span of the gauge, in degrees (see below) |
 | `hide_inactive_leds` | boolean | false | Hide inactive LEDs |
@@ -248,6 +315,12 @@ gauges:
 | `unit_font_size` | string | '14px' | Font size for unit (e.g. '14px') |
 | `unit_font_weight` | string | 'normal' | Font weight for unit |
 | `unit_font_color` | string | - | Font color for unit |
+
+Both shapes are configured per gauge, so the inner ring can stay round while the outer one
+shows segments, or the other way round. With `led_shape: rect` the gap between the segments
+comes from `leds_count`: fewer segments leave more space between them. The ring is pulled
+inwards by half of `led_length`, so a long segment keeps the same outer edge a round LED
+would have.
 
 #### Individual Themes
 
@@ -342,6 +415,25 @@ from 50 upwards.
 
 **Note:** Thresholds are applied from the lowest value to the highest, whatever the order you
 write them in. A threshold listed out of order still works.
+
+##### Color mode (`severity_mode`)
+
+`severity_mode` decides how the thresholds above are turned into colors. It is set per gauge.
+
+| Option | Type | Default | Description |
+|--------|------|--------|-------------|
+| `severity_mode` | string | `steps` | `steps`, `gradient` or `gradient_arc` |
+
+- `steps` - the historical behaviour: one flat color per threshold.
+- `gradient` - the whole ring takes a single color, interpolated in RGB between the two
+  thresholds surrounding the current value. With green at 20 and red at 50, a value of 35
+  gives the exact middle of the two.
+- `gradient_arc` - each LED takes the color of its own position on the scale, so the lit
+  part of the ring shows the whole gradient at once.
+
+Interpolation needs colors it can read as numbers: hex (`#4caf50`, `#4c5`), named colors,
+`rgb()` and `hsl()` all work. A threshold written as `var(--my-theme-color)` cannot be
+resolved without a layout, and that gauge silently falls back to `steps`.
 
 #### Markers
 
@@ -873,6 +965,112 @@ gauges:
         value: 50
       - color: '#4caf50'
         value: 100
+```
+
+### VU Meter Style (rectangular segments)
+
+Rectangular segments and a low LED count give the look of a hi-fi level meter. The outer
+ring uses long segments, the inner one shorter ones, and both open at the bottom.
+
+```yaml
+type: custom:dual-gauge-card
+name: "Audio Levels"
+gauge_size: 240
+inner_gauge_radius: 72
+card_theme: dark
+title_position: bottom
+
+gauges:
+  # Inner - right channel, short segments
+  - entity: sensor.audio_level_right
+    min: -60
+    max: 0
+    unit: dB
+    decimals: 0
+    leds_count: 24
+    led_size: 7
+    led_shape: rect
+    led_length: 14
+    led_corner_radius: 1
+    start_angle: 225
+    arc_length: 270
+    severity:
+      - color: '#4caf50'
+        value: -18
+      - color: '#ffeb3b'
+        value: -6
+      - color: '#f44336'
+        value: 0
+
+  # Outer - left channel, long segments
+  - entity: sensor.audio_level_left
+    min: -60
+    max: 0
+    unit: dB
+    decimals: 0
+    leds_count: 32
+    led_size: 9
+    led_shape: rect
+    led_length: 26
+    led_corner_radius: 2
+    start_angle: 225
+    arc_length: 270
+    severity:
+      - color: '#4caf50'
+        value: -18
+      - color: '#ffeb3b'
+        value: -6
+      - color: '#f44336'
+        value: 0
+```
+
+### Color Gradient Between Thresholds
+
+The inner gauge blends the whole ring to a single color that follows the value, while the
+outer one spreads the gradient along the lit segments.
+
+```yaml
+type: custom:dual-gauge-card
+name: "Climate"
+gauge_size: 220
+inner_gauge_radius: 68
+card_theme: dark
+
+gauges:
+  # Inner - the whole ring takes one blended color
+  - entity: sensor.living_room_temperature
+    min: 10
+    max: 35
+    unit: "°C"
+    decimals: 1
+    leds_count: 80
+    led_size: 6
+    center_shadow: true
+    severity_mode: gradient
+    severity:
+      - color: '#2196f3'
+        value: 16
+      - color: '#4caf50'
+        value: 22
+      - color: '#f44336'
+        value: 30
+
+  # Outer - each LED keeps the color of its own position
+  - entity: sensor.living_room_humidity
+    min: 0
+    max: 100
+    unit: '%'
+    decimals: 0
+    leds_count: 100
+    led_size: 8
+    severity_mode: gradient_arc
+    severity:
+      - color: '#ffc107'
+        value: 30
+      - color: '#4caf50'
+        value: 50
+      - color: '#2196f3'
+        value: 80
 ```
 
 ## Important Notes
